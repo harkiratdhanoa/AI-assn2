@@ -136,12 +136,11 @@ public:
 		//initialized other vectors
 		for(int i=0;i<4;i++){//row
 			for(int j=0;j<7;j+=2){//coloumm
-				if(i!=3) mySoldiers[i+j+(j/2)+1] = make_pair(board.size()-i-1,j);
-				if(i!=3) enemySoldiers[i+j+(j/2)+1] = make_pair(i, j+1);
-				if(i!=3) ;
+				if(i!=3) mySoldiers.push_back(make_pair(board.size()-i-1,j));
+				if(i!=3) enemySoldiers.push_back(make_pair(i, j+1));
 			}
-			myTownhalls[i+1] = make_pair(board.size()-1, 2*i+1); // T1 at (r-1,1) | T2 at (r-1,3);
-			enemyTownhalls[i] = make_pair(0, 2*i);
+			myTownhalls.push_back(make_pair(board.size()-1, 2*i+1)); // T1 at (r-1,1) | T2 at (r-1,3);
+			enemyTownhalls.push_back(make_pair(0, 2*i));
 		}
 	}
 
@@ -531,18 +530,8 @@ int min_value(State state, int alpha, int beta, int depth);
 int max_value(State state, int alpha, int beta, int depth);
 
 int Eval(State state){
-	//my circles - his circles
-	int count = 0;
-	for(int i=0;i<state.board.size();i++){
-		for(int j=0;j<state.board[0].size();j++){
-			if(state.board[i][j]==1){
-				count+=1;
-			} else if(state.board[i][j]==-1){
-				count--;
-			}
-		}
-	}
-	return count;
+	int townhallDiff = state.myTownhalls.size()*2 - state.enemyTownhalls.size();
+	return townhallDiff + state.mySoldiers.size()-state.enemySoldiers.size();
 }
 
 bool cutoff(State state, int depth){
@@ -552,7 +541,7 @@ bool cutoff(State state, int depth){
 }
 
 int max_value(State state, int alpha, int beta, int depth){
-	if(cutoff(state,depth)){cout<<Eval(state)<<"----------------";return Eval(state);}
+	if(cutoff(state,depth)){return Eval(state);}
 	int v = INT_MIN;
 	for(auto child:state.giveAllChildsOfMax()){
 		v = max(v, min_value(child,alpha,beta,depth+1));
@@ -563,12 +552,14 @@ int max_value(State state, int alpha, int beta, int depth){
 }
 
 int min_value(State state, int alpha, int beta, int depth){
+	// cout<<"Yea";
+	// cout<<"Depth on min: "<<depth<<"\n";
 	if(cutoff(state, depth)){return Eval(state);}
 	int v = INT_MAX;
 	for(auto child:state.giveAllChildsOfMin()){
 		v = min(v, max_value(child, alpha, beta, depth+1));
 		if(v<=alpha){return v;}
-		beta = min(beta, v);
+		beta = beta<v ? beta: v;
 	}
 	return v;
 }
@@ -580,7 +571,6 @@ State action(State s1, State s2){
 void alpha_beta_search(State state){
 	int d = 0;
 	int v = max_value(state, INT_MIN, INT_MAX, d);
-	// cout<<v<<"GGGGGGGGGgg";
 	for(int i=0;i<state.giveAllChildsOfMax().size();i++){
 		if(min_value((state.giveAllChildsOfMax())[i], INT_MIN, INT_MAX, d+1)==v){
 			// return action(state, (state.giveAllChildsOfMax())[i]);
