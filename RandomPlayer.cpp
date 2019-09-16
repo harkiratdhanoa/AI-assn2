@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
-#define 	CORDINATE pair<int, int>
+#define CORDINATE pair<int, int>
 #define SIZE_R 8
 #define SIZE_C 8
 
@@ -14,6 +14,9 @@
 //6. Implement giveAllChildsofMin()
 
 using namespace std;
+
+enum Orient { None, Vertical, Secondary, Horizontal, Primary };
+
 
 int min(int a, int b){
 	return a<b?a:b;
@@ -62,29 +65,29 @@ void printBoard(vector<vector<int> > board){
 	}
 }
 
-void displayUniqueSolier(vector<pair<CORDINATE, int> > soldiers){
+void displayUniqueSolier(vector<CORDINATE> soldiers){
 	int length = soldiers.size();
 	for(int i=0;i<length;i++){
-		cout<<"Soldier/Townhall: "<<soldiers[i].second<<" -> {"<<soldiers[i].first.first<<", "<<soldiers[i].first.second<<"}"<<"\n";
+		cout<<"Soldier/Townhall: "<<soldiers[i].second<<" -> {"<<soldiers[i].first<<", "<<soldiers[i].second<<"}"<<"\n";
 	}
 }
 
-bool isEnemyHere(vector<pair<CORDINATE, int> > enemySoldiers, vector<pair<CORDINATE, int> > enemyTownhalls, int x, int y){
+bool isEnemyHere(vector<CORDINATE> enemySoldiers, vector<CORDINATE> enemyTownhalls, int x, int y){
 	for(auto v: enemySoldiers){
-		if(v.first.first==x && v.first.second==y){return true;}
+		if(v.first==x && v.second==y){return true;}
 	}
 	for(auto v: enemyTownhalls){
-		if(v.first.first==x && v.first.second==y){return true;}
+		if(v.first==x && v.second==y){return true;}
 	}
 	return false;
 }
 
-bool isAllyHere(vector<pair<CORDINATE, int> > mySoldiers, vector<pair<CORDINATE, int> > myTownhalls, int x, int y){
+bool isAllyHere(vector<CORDINATE> mySoldiers, vector<CORDINATE> myTownhalls, int x, int y){
 	for(auto v: mySoldiers){
-		if(v.first.first==x && v.first.second==y){return true;}
+		if(v.first==x && v.second==y){return true;}
 	}
 	for(auto v: myTownhalls){
-		if(v.first.first==x && v.first.second==y){return true;}
+		if(v.first==x && v.second==y){return true;}
 	}
 	return false;
 }
@@ -94,10 +97,10 @@ bool isPositionValid(int i, int j){
 	return false;
 }
 
-bool isUnderAttack(vector<pair<CORDINATE, int> > enemySoldiers, int x, int y){
+bool isUnderAttack(vector<CORDINATE> enemySoldiers, int x, int y){
 	for(auto v: enemySoldiers){
-		int x_enemy = v.first.first;
-		int y_enemy = v.first.second;
+		int x_enemy = v.first;
+		int y_enemy = v.second;
 		for(int i=-1;i<2;i++){
 			for(int j=-1;j<2;j++){
 				if(x==x_enemy-i && y==y_enemy-j){return true;}
@@ -107,9 +110,9 @@ bool isUnderAttack(vector<pair<CORDINATE, int> > enemySoldiers, int x, int y){
 	return false;
 }
 
-void update(vector<pair<CORDINATE, int> >& enemy, int x, int y){
+void update(vector<CORDINATE> & enemy, int x, int y){
 	for(int i=0;i<enemy.size();i++){
-		if(enemy[i].first.first ==x && enemy[i].first.second == y){
+		if(enemy[i].first ==x && enemy[i].second == y){
 			enemy.erase(enemy.begin()+i);
 			break;
 		}
@@ -120,10 +123,12 @@ class State {
 public:
 	// int blackOrWhite; //-1 for black 1 for white
 	vector<vector<int> > board; // 0 for empty | -2 for black castle | -1 for black circle | 1 for white circle | 2 for white castle
-	vector<pair<CORDINATE, int> > mySoldiers;
-	vector<pair<CORDINATE, int> > enemySoldiers;
-	vector<pair<CORDINATE, int> > myTownhalls;
-	vector<pair<CORDINATE, int> > enemyTownhalls;
+	vector<CORDINATE> mySoldiers;
+	vector<pair<CORDINATE, Orient > > myCannons;
+	vector<CORDINATE> enemySoldiers;
+	vector<pair<CORDINATE, Orient > > enemyCannons;
+	vector<CORDINATE> myTownhalls;
+	vector<CORDINATE> enemyTownhalls;
 
 	State(){
 		board = giveInitialBoard();
@@ -131,11 +136,12 @@ public:
 		//initialized other vectors
 		for(int i=0;i<4;i++){//row
 			for(int j=0;j<7;j+=2){//coloumm
-				if(i!=3) mySoldiers.push_back(make_pair(   make_pair(board.size()-i-1, j)  , i+j+(j/2)+1  )  );
-				if(i!=3) enemySoldiers.push_back(   make_pair(make_pair(i, j+1), (i+j+(j/2)+1))   );
+				if(i!=3) mySoldiers[i+j+(j/2)+1] = make_pair(board.size()-i-1,j);
+				if(i!=3) enemySoldiers[i+j+(j/2)+1] = make_pair(i, j+1);
+				if(i!=3) ;
 			}
-			myTownhalls.push_back(make_pair(make_pair(board.size()-1, 2*i+1), i+1)); // T1 at (r-1,1) | T2 at (r-1,3);
-			enemyTownhalls.push_back(make_pair(make_pair(0, 2*i), i));
+			myTownhalls[i+1] = make_pair(board.size()-1, 2*i+1); // T1 at (r-1,1) | T2 at (r-1,3);
+			enemyTownhalls[i] = make_pair(0, 2*i);
 		}
 	}
 
@@ -145,7 +151,7 @@ public:
 		State newstate = *this;
 		for(int i=0;i<12;i++){
 			
-			pair<int, int> pos = this->enemySoldiers[i].first;
+			CORDINATE pos = this->enemySoldiers[i];
 			// cout<<"{"<<pos.first<<", "<<pos.second<<"}"<<"\n";
 
 			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first+1, pos.second)){ // up				
@@ -153,8 +159,8 @@ public:
 				//duplicated this state
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first+1;
-				newstate.enemySoldiers[i].first.second = pos.second;
+				newstate.enemySoldiers[i].first = pos.first+1;
+				newstate.enemySoldiers[i].second = pos.second;
 				this->board[pos.first+1][pos.second]=-1;
 				
 				//Actually either of these two below will happen
@@ -168,8 +174,8 @@ public:
 				
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first+1;
-				newstate.enemySoldiers[i].first.second = pos.second;
+				newstate.enemySoldiers[i].first = pos.first+1;
+				newstate.enemySoldiers[i].second = pos.second;
 
 
 				newstate.board[pos.first+1][pos.second]=-1; //update board by moving my soldier here
@@ -181,8 +187,8 @@ public:
 			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first+1, pos.second-1)){//up left daignaolly
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first+1;
-				newstate.enemySoldiers[i].first.second = pos.second-1;
+				newstate.enemySoldiers[i].first = pos.first+1;
+				newstate.enemySoldiers[i].second = pos.second-1;
 				
 				newstate.board[pos.first+1][pos.second-1]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -193,8 +199,8 @@ public:
 			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+1, pos.second-1)==false && isPositionValid(pos.first+1, pos.second-1)){
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first+1;
-				newstate.enemySoldiers[i].first.second = pos.second-1;
+				newstate.enemySoldiers[i].first = pos.first+1;
+				newstate.enemySoldiers[i].second = pos.second-1;
 				
 				newstate.board[pos.first+1][pos.second-1]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -204,8 +210,8 @@ public:
 			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first+1, pos.second+1)){//up right daignaolly
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first+1;
-				newstate.enemySoldiers[i].first.second = pos.second+1;
+				newstate.enemySoldiers[i].first = pos.first+1;
+				newstate.enemySoldiers[i].second = pos.second+1;
 				
 				newstate.board[pos.first+1][pos.second+1]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -216,8 +222,8 @@ public:
 			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+1, pos.second+1)==false && isPositionValid(pos.first+1, pos.second+1)){
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first+1;
-				newstate.enemySoldiers[i].first.second = pos.second+1;
+				newstate.enemySoldiers[i].first = pos.first+1;
+				newstate.enemySoldiers[i].second = pos.second+1;
 				
 				newstate.board[pos.first+1][pos.second+1]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -228,8 +234,8 @@ public:
 			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first-2, pos.second+2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second+2)){
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first-2;
-				newstate.enemySoldiers[i].first.second = pos.second+2;
+				newstate.enemySoldiers[i].first = pos.first-2;
+				newstate.enemySoldiers[i].second = pos.second+2;
 				
 				newstate.board[pos.first-2][pos.second+2]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -240,8 +246,8 @@ public:
 			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-2, pos.second+2)==false && isPositionValid(pos.first-2, pos.second+2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second+2)){
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first-2;
-				newstate.enemySoldiers[i].first.second = pos.second+2;
+				newstate.enemySoldiers[i].first = pos.first-2;
+				newstate.enemySoldiers[i].second = pos.second+2;
 				
 				newstate.board[pos.first-2][pos.second+2]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -253,8 +259,8 @@ public:
 				
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first-2;
-				newstate.enemySoldiers[i].first.second = pos.second-2;
+				newstate.enemySoldiers[i].first = pos.first-2;
+				newstate.enemySoldiers[i].second = pos.second-2;
 				
 				newstate.board[pos.first-2][pos.second-2]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -265,8 +271,8 @@ public:
 			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-2, pos.second-2)==false && isPositionValid(pos.first-2, pos.second-2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second-2)){
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first-2;
-				newstate.enemySoldiers[i].first.second = pos.second-2;
+				newstate.enemySoldiers[i].first = pos.first-2;
+				newstate.enemySoldiers[i].second = pos.second-2;
 				
 				newstate.board[pos.first-2][pos.second-2]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -278,8 +284,8 @@ public:
 				
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first-2;
-				newstate.enemySoldiers[i].first.second = pos.second;
+				newstate.enemySoldiers[i].first = pos.first-2;
+				newstate.enemySoldiers[i].second = pos.second;
 				
 				newstate.board[pos.first-2][pos.second]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -290,8 +296,8 @@ public:
 			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-2, pos.second)==false && isPositionValid(pos.first-2, pos.second) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second)){
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first-2;
-				newstate.enemySoldiers[i].first.second = pos.second;
+				newstate.enemySoldiers[i].first = pos.first-2;
+				newstate.enemySoldiers[i].second = pos.second;
 				
 				newstate.board[pos.first-2][pos.second]=-1;
 				newstate.board[pos.first][pos.second]=0;
@@ -302,8 +308,8 @@ public:
 			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first, pos.second-1) && isPositionValid(pos.first, pos.second-1)){//side left only when enemy
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first;
-				newstate.enemySoldiers[i].first.second = pos.second-1;
+				newstate.enemySoldiers[i].first = pos.first;
+				newstate.enemySoldiers[i].second = pos.second-1;
 				
 				newstate.board[pos.first][pos.second-1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -315,8 +321,8 @@ public:
 			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first, pos.second+1) && isPositionValid(pos.first, pos.second+1)){//side right only when enemy
 				newstate = *this;
 
-				newstate.enemySoldiers[i].first.first = pos.first;
-				newstate.enemySoldiers[i].first.second = pos.second+1;
+				newstate.enemySoldiers[i].first = pos.first;
+				newstate.enemySoldiers[i].second = pos.second+1;
 				
 				newstate.board[pos.first+1][pos.second+1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -335,7 +341,7 @@ public:
 		State newstate = *this;
 		for(int i=0;i<12;i++){
 			
-			pair<int, int> pos = this->mySoldiers[i].first;
+			CORDINATE pos = this->mySoldiers[i];
 			// cout<<"{"<<pos.first<<", "<<pos.second<<"}"<<"\n";
 
 			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-1, pos.second)){ // up				
@@ -343,8 +349,8 @@ public:
 				//duplicated this state
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first-1;
-				newstate.mySoldiers[i].first.second = pos.second;
+				newstate.mySoldiers[i].first = pos.first-1;
+				newstate.mySoldiers[i].second = pos.second;
 				this->board[pos.first-1][pos.second]=1;
 				
 				//Actually either of these two below will happen
@@ -358,8 +364,8 @@ public:
 				
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first-1;
-				newstate.mySoldiers[i].first.second = pos.second;
+				newstate.mySoldiers[i].first = pos.first-1;
+				newstate.mySoldiers[i].second = pos.second;
 
 
 				newstate.board[pos.first-1][pos.second]=1; //update board by moving my soldier here
@@ -371,8 +377,8 @@ public:
 			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-1, pos.second-1)){//up left daignaolly
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first-1;
-				newstate.mySoldiers[i].first.second = pos.second-1;
+				newstate.mySoldiers[i].first = pos.first-1;
+				newstate.mySoldiers[i].second = pos.second-1;
 				
 				newstate.board[pos.first-1][pos.second-1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -383,8 +389,8 @@ public:
 			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first-1, pos.second-1)==false && isPositionValid(pos.first-1, pos.second-1)){
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first-1;
-				newstate.mySoldiers[i].first.second = pos.second-1;
+				newstate.mySoldiers[i].first = pos.first-1;
+				newstate.mySoldiers[i].second = pos.second-1;
 				
 				newstate.board[pos.first-1][pos.second-1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -394,8 +400,8 @@ public:
 			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-1, pos.second+1)){//up right daignaolly
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first-1;
-				newstate.mySoldiers[i].first.second = pos.second+1;
+				newstate.mySoldiers[i].first = pos.first-1;
+				newstate.mySoldiers[i].second = pos.second+1;
 				
 				newstate.board[pos.first-1][pos.second+1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -406,8 +412,8 @@ public:
 			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first-1, pos.second+1)==false && isPositionValid(pos.first-1, pos.second+1)){
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first-1;
-				newstate.mySoldiers[i].first.second = pos.second+1;
+				newstate.mySoldiers[i].first = pos.first-1;
+				newstate.mySoldiers[i].second = pos.second+1;
 				
 				newstate.board[pos.first-1][pos.second+1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -418,8 +424,8 @@ public:
 			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+2, pos.second+2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second+2)){
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first+2;
-				newstate.mySoldiers[i].first.second = pos.second+2;
+				newstate.mySoldiers[i].first = pos.first+2;
+				newstate.mySoldiers[i].second = pos.second+2;
 				
 				newstate.board[pos.first+2][pos.second+2]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -430,8 +436,8 @@ public:
 			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first+2, pos.second+2)==false && isPositionValid(pos.first+2, pos.second+2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second+2)){
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first+2;
-				newstate.mySoldiers[i].first.second = pos.second+2;
+				newstate.mySoldiers[i].first = pos.first+2;
+				newstate.mySoldiers[i].second = pos.second+2;
 				
 				newstate.board[pos.first+2][pos.second+2]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -443,8 +449,8 @@ public:
 				
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first+2;
-				newstate.mySoldiers[i].first.second = pos.second-2;
+				newstate.mySoldiers[i].first = pos.first+2;
+				newstate.mySoldiers[i].second = pos.second-2;
 				
 				newstate.board[pos.first+2][pos.second-2]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -455,8 +461,8 @@ public:
 			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first+2, pos.second-2)==false && isPositionValid(pos.first+2, pos.second-2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second-2)){
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first+2;
-				newstate.mySoldiers[i].first.second = pos.second-2;
+				newstate.mySoldiers[i].first = pos.first+2;
+				newstate.mySoldiers[i].second = pos.second-2;
 				
 				newstate.board[pos.first+2][pos.second-2]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -468,8 +474,8 @@ public:
 				
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first+2;
-				newstate.mySoldiers[i].first.second = pos.second;
+				newstate.mySoldiers[i].first = pos.first+2;
+				newstate.mySoldiers[i].second = pos.second;
 				
 				newstate.board[pos.first+2][pos.second]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -480,8 +486,8 @@ public:
 			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first+2, pos.second)==false && isPositionValid(pos.first+2, pos.second) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second)){
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first+2;
-				newstate.mySoldiers[i].first.second = pos.second;
+				newstate.mySoldiers[i].first = pos.first+2;
+				newstate.mySoldiers[i].second = pos.second;
 				
 				newstate.board[pos.first+2][pos.second]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -492,8 +498,8 @@ public:
 			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first, pos.second-1) && isPositionValid(pos.first, pos.second-1)){//side left only when enemy
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first;
-				newstate.mySoldiers[i].first.second = pos.second-1;
+				newstate.mySoldiers[i].first = pos.first;
+				newstate.mySoldiers[i].second = pos.second-1;
 				
 				newstate.board[pos.first][pos.second-1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -505,8 +511,8 @@ public:
 			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first, pos.second+1) && isPositionValid(pos.first, pos.second+1)){//side right only when enemy
 				newstate = *this;
 
-				newstate.mySoldiers[i].first.first = pos.first;
-				newstate.mySoldiers[i].first.second = pos.second+1;
+				newstate.mySoldiers[i].first = pos.first;
+				newstate.mySoldiers[i].second = pos.second+1;
 				
 				newstate.board[pos.first+1][pos.second+1]=1;
 				newstate.board[pos.first][pos.second]=0;
@@ -592,8 +598,8 @@ int main(int argc, char const *argv[])
 	startNode.board[2][1] = 0;
 	startNode.board[4][1] = -1;
 	for(int t = 0;t<startNode.enemySoldiers.size();t++){
-		if(startNode.enemySoldiers[t].first.first==2 && startNode.enemySoldiers[t].first.second==1){
-			startNode.enemySoldiers[t].first.first = 4;
+		if(startNode.enemySoldiers[t].first==2 && startNode.enemySoldiers[t].second==1){
+			startNode.enemySoldiers[t].first = 4;
 			// startNode.enemySoldiers.push_back({{4,1}, startNode.enemySoldiers[t].second});
 			// startNode.enemySoldiers.erase(startNode.enemySoldiers.begin() + t);
 		}
