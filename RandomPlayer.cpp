@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
+#include <string>
 #define CORDINATE pair<int, int>
 #define SIZE_R 8
 #define SIZE_C 8
@@ -17,6 +18,10 @@ using namespace std;
 
 enum Orient { None, Vertical, Secondary, Horizontal, Primary };
 
+enum Neighbour {U,UR,R,DR,D,DL,L,UL};
+
+CORDINATE myNeighbours[8] = {make_pair(-1,0), make_pair(-1,1), make_pair(0,1), make_pair(2,2), make_pair(2,0), make_pair(2,-2), make_pair(0,-1), make_pair(-1,-1) };
+CORDINATE enemyNeighbours[8] = {make_pair(1,0), make_pair(1,-1), make_pair(0,-1), make_pair(-2,-2), make_pair(-2,0), make_pair(-2,2), make_pair(0,1), make_pair(1,1) };
 
 int min(int a, int b){
 	return a<b?a:b;
@@ -59,6 +64,11 @@ void printBoard(vector<vector<int> > board){
 	int c = board[0].size();
 	for(int i=0;i<r;i++){
 		for(int j=0;j<c;j++){
+			if(board[i][j]>=0)
+				cout<<" ";
+			if(!board[i][j])
+				cout<<". ";
+			else
 			cout<<board[i][j]<<" ";
 		}
 		cout<<"\n";
@@ -72,52 +82,7 @@ void displayUniqueSolier(vector<CORDINATE> soldiers){
 	}
 }
 
-bool isEnemyHere(vector<CORDINATE> enemySoldiers, vector<CORDINATE> enemyTownhalls, int x, int y){
-	for(auto v: enemySoldiers){
-		if(v.first==x && v.second==y){return true;}
-	}
-	for(auto v: enemyTownhalls){
-		if(v.first==x && v.second==y){return true;}
-	}
-	return false;
-}
 
-bool isAllyHere(vector<CORDINATE> mySoldiers, vector<CORDINATE> myTownhalls, int x, int y){
-	for(auto v: mySoldiers){
-		if(v.first==x && v.second==y){return true;}
-	}
-	for(auto v: myTownhalls){
-		if(v.first==x && v.second==y){return true;}
-	}
-	return false;
-}
-
-bool isPositionValid(int i, int j){
-	if(i<SIZE_R && i>=0 && j>=0 && j<SIZE_C){return true;}
-	return false;
-}
-
-bool isUnderAttack(vector<CORDINATE> enemySoldiers, int x, int y){
-	for(auto v: enemySoldiers){
-		int x_enemy = v.first;
-		int y_enemy = v.second;
-		for(int i=-1;i<2;i++){
-			for(int j=-1;j<2;j++){
-				if(x==x_enemy-i && y==y_enemy-j){return true;}
-			}
-		}
-	}
-	return false;
-}
-
-void update(vector<CORDINATE> & enemy, int x, int y){
-	for(int i=0;i<enemy.size();i++){
-		if(enemy[i].first ==x && enemy[i].second == y){
-			enemy.erase(enemy.begin()+i);
-			break;
-		}
-	}
-}
 
 class State {
 public:
@@ -129,405 +94,243 @@ public:
 	vector<pair<CORDINATE, Orient > > enemyCannons;
 	vector<CORDINATE> myTownhalls;
 	vector<CORDINATE> enemyTownhalls;
-
+	string action;
+	int backedupVal;
 	State(){
 		board = giveInitialBoard();
-
+		action = "";
 		//initialized other vectors
 		for(int i=0;i<4;i++){//row
 			for(int j=0;j<7;j+=2){//coloumm
-				if(i!=3) mySoldiers.push_back(make_pair(board.size()-i-1,j));
-				if(i!=3) enemySoldiers.push_back(make_pair(i, j+1));
+				if(i!=3) {
+					mySoldiers.push_back(make_pair(board.size()-i-1,j));
+					enemySoldiers.push_back(make_pair(i, j+1));
+				}
+				if(i==2) {
+					myCannons.push_back(make_pair(make_pair(board.size()-i-1,j), Vertical));
+					enemyCannons.push_back(make_pair(make_pair(i, j+1), Vertical));
+				}
+
 			}
 			myTownhalls.push_back(make_pair(board.size()-1, 2*i+1)); // T1 at (r-1,1) | T2 at (r-1,3);
 			enemyTownhalls.push_back(make_pair(0, 2*i));
+
+		}
+		backedupVal=INT_MIN;
+	}
+
+	bool isEnemyHere(int x, int y){
+		if(!isPositionValid(x,y))
+			return false;
+		if(board[x][y]<0) return true;
+		return false;
+	}
+
+	bool isAllyHere(int x, int y){
+		if(!isPositionValid(x,y))
+			return false;
+		if(board[x][y]>0) return true;
+		return false;
+	}
+
+	bool isPositionValid(int i, int j){
+		if(i<SIZE_R && i>=0 && j>=0 && j<SIZE_C){return true;}
+		return false;
+	}
+
+	bool isUnderAttack(bool enemy, int x, int y){
+		if(!isPositionValid(x,y))
+			return false;
+		if(enemy)
+			for(auto v: enemySoldiers){
+				int x_enemy = v.first;
+				int y_enemy = v.second;
+				for(int i=-1;i<2;i++){
+					for(int j=-1;j<2;j++){
+						if(x==x_enemy-i && y==y_enemy-j){return true;}
+					}
+				}
+			}
+		else
+			for(auto v: mySoldiers){
+			int x_enemy = v.first;
+			int y_enemy = v.second;
+			for(int i=-1;i<2;i++){
+				for(int j=-1;j<2;j++){
+					if(x==x_enemy-i && y==y_enemy-j){return true;}
+				}
+			}
+		}
+		return false;
+	}
+
+	void kill(int x, int y){
+		for(int i=0;i<enemySoldiers.size();i++){
+			if(enemySoldiers[i].first ==x && enemySoldiers[i].second == y){
+				enemySoldiers.erase(enemySoldiers.begin()+i);
+				break;
+			}
+			else if(i< enemyTownhalls.size() && enemyTownhalls[i].first ==x && enemyTownhalls[i].second == y){
+				enemyTownhalls.erase(enemyTownhalls.begin()+i);
+				break;
+			}
 		}
 	}
 
-	vector<State> giveAllChildsOfMin(){
-		vector<State> res;
-		//cout<<"JEGS";
-		State newstate = *this;
-		for(int i=0;i<12;i++){
-			
-			CORDINATE pos = this->enemySoldiers[i];
-			// cout<<"{"<<pos.first<<", "<<pos.second<<"}"<<"\n";
-
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first+1, pos.second)){ // up				
-				
-				//duplicated this state
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first+1;
-				newstate.enemySoldiers[i].second = pos.second;
-				this->board[pos.first+1][pos.second]=-1;
-				
-				//Actually either of these two below will happen
-				update(newstate.mySoldiers, pos.first+1, pos.second);
-				update(newstate.myTownhalls, pos.first+1, pos.second);
-				newstate.board[pos.first][pos.second] = 0;
-
-				res.push_back(newstate);
-			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+1, pos.second)==false && isPositionValid(pos.first+1, pos.second)){
-				// cout<<"{"<<pos.first<<", "<<pos.second<<"}"<<"\n";
-				
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first+1;
-				newstate.enemySoldiers[i].second = pos.second;
-
-
-				newstate.board[pos.first+1][pos.second]=-1; //update board by moving my soldier here
-				newstate.board[pos.first][pos.second] = 0;
-				// printBoard(newstate.board);
-				res.push_back(newstate);
+	void killOwn(int x, int y){
+		for(int i=0;i<mySoldiers.size();i++){
+			if(mySoldiers[i].first ==x && mySoldiers[i].second == y){
+				mySoldiers.erase(mySoldiers.begin()+i);
+				break;
 			}
-
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first+1, pos.second-1)){//up left daignaolly
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first+1;
-				newstate.enemySoldiers[i].second = pos.second-1;
-				
-				newstate.board[pos.first+1][pos.second-1]=-1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first+1, pos.second-1);
-				update(newstate.myTownhalls, pos.first+1, pos.second-1);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+1, pos.second-1)==false && isPositionValid(pos.first+1, pos.second-1)){
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first+1;
-				newstate.enemySoldiers[i].second = pos.second-1;
-				
-				newstate.board[pos.first+1][pos.second-1]=-1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first+1, pos.second+1)){//up right daignaolly
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first+1;
-				newstate.enemySoldiers[i].second = pos.second+1;
-				
-				newstate.board[pos.first+1][pos.second+1]=-1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first+1, pos.second+1);
-				update(newstate.myTownhalls, pos.first+1, pos.second+1);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+1, pos.second+1)==false && isPositionValid(pos.first+1, pos.second+1)){
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first+1;
-				newstate.enemySoldiers[i].second = pos.second+1;
-				
-				newstate.board[pos.first+1][pos.second+1]=-1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//back right daignaolly
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first-2, pos.second+2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second+2)){
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first-2;
-				newstate.enemySoldiers[i].second = pos.second+2;
-				
-				newstate.board[pos.first-2][pos.second+2]=-1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first-2, pos.second+2);
-				update(newstate.myTownhalls, pos.first-2, pos.second+2);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-2, pos.second+2)==false && isPositionValid(pos.first-2, pos.second+2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second+2)){
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first-2;
-				newstate.enemySoldiers[i].second = pos.second+2;
-				
-				newstate.board[pos.first-2][pos.second+2]=-1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//back left daignaolly
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first-2, pos.second-2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second-2)){
-				
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first-2;
-				newstate.enemySoldiers[i].second = pos.second-2;
-				
-				newstate.board[pos.first-2][pos.second-2]=-1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first-2, pos.second-2);
-				update(newstate.myTownhalls, pos.first-2, pos.second-2);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-2, pos.second-2)==false && isPositionValid(pos.first-2, pos.second-2) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second-2)){
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first-2;
-				newstate.enemySoldiers[i].second = pos.second-2;
-				
-				newstate.board[pos.first-2][pos.second-2]=-1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//back left down
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first-2, pos.second) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second)){
-				
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first-2;
-				newstate.enemySoldiers[i].second = pos.second;
-				
-				newstate.board[pos.first-2][pos.second]=-1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first-2, pos.second);
-				update(newstate.myTownhalls, pos.first-2, pos.second);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-2, pos.second)==false && isPositionValid(pos.first-2, pos.second) && isUnderAttack(this->mySoldiers, pos.first-2, pos.second)){
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first-2;
-				newstate.enemySoldiers[i].second = pos.second;
-				
-				newstate.board[pos.first-2][pos.second]=-1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//couldnt debug this because root wont have enemy sideways
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first, pos.second-1) && isPositionValid(pos.first, pos.second-1)){//side left only when enemy
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first;
-				newstate.enemySoldiers[i].second = pos.second-1;
-				
-				newstate.board[pos.first][pos.second-1]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first+1, pos.second-1);
-				update(newstate.myTownhalls, pos.first+1, pos.second-1);
-				res.push_back(newstate);
-			}
-			if(isEnemyHere(this->mySoldiers, this->myTownhalls, pos.first, pos.second+1) && isPositionValid(pos.first, pos.second+1)){//side right only when enemy
-				newstate = *this;
-
-				newstate.enemySoldiers[i].first = pos.first;
-				newstate.enemySoldiers[i].second = pos.second+1;
-				
-				newstate.board[pos.first+1][pos.second+1]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.mySoldiers, pos.first+1, pos.second+1);
-				update(newstate.myTownhalls, pos.first+1, pos.second+1);
-				res.push_back(newstate);
+			else if(i< myTownhalls.size() && myTownhalls[i].first ==x && myTownhalls[i].second == y){
+				myTownhalls.erase(myTownhalls.begin()+i);
+				break;
 			}
 		}
+	}
+
+	void updateCannons(){
+		myCannons.clear();
+		for(auto sold_pos:mySoldiers){
+			if(sold_pos.first<1 || sold_pos.second<1 || sold_pos.first>SIZE_R-2 || sold_pos.second>SIZE_C-2)
+				continue;
+			if(board[sold_pos.first+1][sold_pos.second+1]==1 && board[sold_pos.first-1][sold_pos.second-1] == 1)
+				myCannons.push_back(make_pair(sold_pos,Primary));
+			if(board[sold_pos.first][sold_pos.second+1]==1 && board[sold_pos.first][sold_pos.second-1] == 1)
+				myCannons.push_back(make_pair(sold_pos,Horizontal));
+			if(board[sold_pos.first+1][sold_pos.second]==1 && board[sold_pos.first-1][sold_pos.second] == 1)
+				myCannons.push_back(make_pair(sold_pos,Vertical));
+			if(board[sold_pos.first+1][sold_pos.second-1]==1 && board[sold_pos.first-1][sold_pos.second+1] == 1)
+				myCannons.push_back(make_pair(sold_pos,Secondary));
+		}
+		enemyCannons.clear();
+		for(auto sold_pos:enemySoldiers){
+			if(sold_pos.first<1 || sold_pos.second<1 || sold_pos.first>SIZE_R-1 || sold_pos.second>SIZE_C-1)
+				continue;
+			if(board[sold_pos.first+1][sold_pos.second+1]==1 && board[sold_pos.first-1][sold_pos.second-1] == 1)
+				enemyCannons.push_back(make_pair(sold_pos,Primary));
+			if(board[sold_pos.first][sold_pos.second+1]==1 && board[sold_pos.first][sold_pos.second-1] == 1)
+				enemyCannons.push_back(make_pair(sold_pos,Horizontal));
+			if(board[sold_pos.first+1][sold_pos.second]==1 && board[sold_pos.first-1][sold_pos.second] == 1)
+				enemyCannons.push_back(make_pair(sold_pos,Vertical));
+			if(board[sold_pos.first+1][sold_pos.second-1]==1 && board[sold_pos.first-1][sold_pos.second+1] == 1)
+				enemyCannons.push_back(make_pair(sold_pos,Secondary));
+		}
+		return;
+	}
+	vector<State> giveAllChildsOfMin(){
+		// cout<<"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~welcome to child of MIN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		vector<State> res;
+		State newstate;
+		// printBoard(this->board);
+		for(int j=0;j<12;j++){
+			CORDINATE pos = this->enemySoldiers[j];
+			// cout<<"\nsoldier:" <<j<<" at "<<pos.first<<","<<pos.second<<"\n\n";
+			for(int i=0;i<8;i++){
+
+				CORDINATE relative = enemyNeighbours[i];
+				relative.first+=pos.first;
+				relative.second+=pos.second;
+
+				if((i==DL||i==D||i==DR) && !isUnderAttack(false, pos.first, pos.second)){ 	// BACKING OUT NOT ALLOWED
+					// cout<<"CANT RETREAT!          ";
+					continue;
+				}
+				if(isAllyHere(relative.first, relative.second)){ // GET KILLED (AT ANY OF 8)
+					// cout<<"KILLING "<<relative.first<<","<<relative.second<<"!          ";
+					newstate = *this;
+					newstate.enemySoldiers[i] = relative;
+					newstate.board[relative.first][relative.second]=-1;
+					newstate.killOwn(relative.first, relative.second);
+					newstate.board[pos.first][pos.second] = 0;
+					newstate.updateCannons();
+					newstate.action = "Enemy "+to_string(pos.first)+" "+to_string(pos.second)+" M "+to_string(relative.first)+" "+to_string(relative.second);
+					// cout<<newstate.action<<"  !!! ";
+					res.push_back(newstate);
+
+				} 
+				else if(isEnemyHere(relative.first, relative.second)==false && (i!=L) && (i!=R) && isPositionValid(relative.first,relative.second)){ // ENEMY MOVE (TO ITS UL,U,UR)
+					newstate = *this;
+
+					newstate.enemySoldiers[i] = relative;
+					newstate.board[relative.first][relative.second]=-1;
+					newstate.board[pos.first][pos.second] = 0;
+					newstate.updateCannons();
+					newstate.action = "Enemy "+to_string(pos.first)+" "+to_string(pos.second)+" M "+to_string(relative.first)+" "+to_string(relative.second);
+					// cout<<newstate.action<<"!          ";
+					res.push_back(newstate);
+				}
+				// else cout<<"MOVE INVALID!          ";
+			}
+		}
+		// for(auto can:myCannons){
+				
+		// 	}
 		return res;
 	}
 
 	vector<State> giveAllChildsOfMax(){
+		// cout<<"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~welcome to child of MAX~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		vector<State> res;
-		//cout<<"JEGS";
-		State newstate = *this;
-		for(int i=0;i<12;i++){
-			
-			CORDINATE pos = this->mySoldiers[i];
-			// cout<<"{"<<pos.first<<", "<<pos.second<<"}"<<"\n";
+		State newstate;
+		// printBoard(this->board);
+		for(int j=0;j<12;j++){
+			CORDINATE pos = this->mySoldiers[j];
+			// cout<<"\nsoldier:" <<j<<" at "<<pos.first<<","<<pos.second<<"\n\n";
+			for(int i=0;i<8;i++){
+				// cout<<"neighbour:" <<i<<"\n";
 
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-1, pos.second)){ // up				
+				CORDINATE relative = myNeighbours[i];
+				relative.first+=pos.first;
+				relative.second+=pos.second;
 				
-				//duplicated this state
-				newstate = *this;
+				if((i==DL||i==D||i==DR) && !isUnderAttack(false, pos.first, pos.second)){ // BACKING OUT NOT ALLOWED
+					// cout<<"CAN'T RETREAT!          ";
+					continue;
+				}
+				if(isEnemyHere(relative.first, relative.second)){ // KILL ENEMY (AT ANY OF 8)
+					// cout<<"KILLING "<<relative.first<<","<<relative.second<<"!          ";
 
-				newstate.mySoldiers[i].first = pos.first-1;
-				newstate.mySoldiers[i].second = pos.second;
-				this->board[pos.first-1][pos.second]=1;
-				
-				//Actually either of these two below will happen
-				update(newstate.enemySoldiers, pos.first-1, pos.second);
-				update(newstate.enemyTownhalls, pos.first-1, pos.second);
-				newstate.board[pos.first][pos.second] = 0;
+					newstate = *this;
 
-				res.push_back(newstate);
-			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first-1, pos.second)==false && isPositionValid(pos.first-1, pos.second)){
-				// cout<<"{"<<pos.first<<", "<<pos.second<<"}"<<"\n";
-				
-				newstate = *this;
+					newstate.mySoldiers[i] = relative;
+					newstate.board[relative.first][relative.second]=1;
+					// printBoard(board);
+					newstate.kill(relative.first, relative.second);
+					// printBoard(board);
+					newstate.board[pos.first][pos.second] = 0;
+					newstate.updateCannons();
+					newstate.action = "S "+to_string(pos.first)+" "+to_string(pos.second)+" M "+to_string(relative.first)+" "+to_string(relative.second);
+					// cout<<newstate.action<<"  !!! ";
+					res.push_back(newstate);
 
-				newstate.mySoldiers[i].first = pos.first-1;
-				newstate.mySoldiers[i].second = pos.second;
+				} 
+				else if(isAllyHere(relative.first, relative.second)==false && (i!=L) && (i!=R) && isPositionValid(relative.first,relative.second)){ // I MOVE (TO UL,U,UR)
+					// cout<<"I MOVE (TO UL,U,UR) - ";
+					newstate = *this;
 
-
-				newstate.board[pos.first-1][pos.second]=1; //update board by moving my soldier here
-				newstate.board[pos.first][pos.second] = 0;
-				// printBoard(newstate.board);
-				res.push_back(newstate);
-			}
-
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-1, pos.second-1)){//up left daignaolly
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first-1;
-				newstate.mySoldiers[i].second = pos.second-1;
-				
-				newstate.board[pos.first-1][pos.second-1]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first-1, pos.second-1);
-				update(newstate.enemyTownhalls, pos.first-1, pos.second-1);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first-1, pos.second-1)==false && isPositionValid(pos.first-1, pos.second-1)){
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first-1;
-				newstate.mySoldiers[i].second = pos.second-1;
-				
-				newstate.board[pos.first-1][pos.second-1]=1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first-1, pos.second+1)){//up right daignaolly
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first-1;
-				newstate.mySoldiers[i].second = pos.second+1;
-				
-				newstate.board[pos.first-1][pos.second+1]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first-1, pos.second+1);
-				update(newstate.enemyTownhalls, pos.first-1, pos.second+1);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first-1, pos.second+1)==false && isPositionValid(pos.first-1, pos.second+1)){
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first-1;
-				newstate.mySoldiers[i].second = pos.second+1;
-				
-				newstate.board[pos.first-1][pos.second+1]=1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//back right daignaolly
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+2, pos.second+2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second+2)){
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first+2;
-				newstate.mySoldiers[i].second = pos.second+2;
-				
-				newstate.board[pos.first+2][pos.second+2]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first+2, pos.second+2);
-				update(newstate.enemyTownhalls, pos.first+2, pos.second+2);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first+2, pos.second+2)==false && isPositionValid(pos.first+2, pos.second+2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second+2)){
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first+2;
-				newstate.mySoldiers[i].second = pos.second+2;
-				
-				newstate.board[pos.first+2][pos.second+2]=1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//back left daignaolly
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+2, pos.second-2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second-2)){
-				
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first+2;
-				newstate.mySoldiers[i].second = pos.second-2;
-				
-				newstate.board[pos.first+2][pos.second-2]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first+2, pos.second-2);
-				update(newstate.enemyTownhalls, pos.first+2, pos.second-2);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first+2, pos.second-2)==false && isPositionValid(pos.first+2, pos.second-2) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second-2)){
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first+2;
-				newstate.mySoldiers[i].second = pos.second-2;
-				
-				newstate.board[pos.first+2][pos.second-2]=1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//back left down
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first+2, pos.second) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second)){
-				
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first+2;
-				newstate.mySoldiers[i].second = pos.second;
-				
-				newstate.board[pos.first+2][pos.second]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first+2, pos.second);
-				update(newstate.enemyTownhalls, pos.first+2, pos.second);
-				res.push_back(newstate);
-			} else if(isAllyHere(this->mySoldiers, this->myTownhalls, pos.first+2, pos.second)==false && isPositionValid(pos.first+2, pos.second) && isUnderAttack(this->enemySoldiers, pos.first+2, pos.second)){
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first+2;
-				newstate.mySoldiers[i].second = pos.second;
-				
-				newstate.board[pos.first+2][pos.second]=1;
-				newstate.board[pos.first][pos.second]=0;
-				res.push_back(newstate);
-			}
-
-			//couldnt debug this because root wont have enemy sideways
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first, pos.second-1) && isPositionValid(pos.first, pos.second-1)){//side left only when enemy
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first;
-				newstate.mySoldiers[i].second = pos.second-1;
-				
-				newstate.board[pos.first][pos.second-1]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first+1, pos.second-1);
-				update(newstate.enemyTownhalls, pos.first+1, pos.second-1);
-				res.push_back(newstate);
-			}
-			if(isEnemyHere(this->enemySoldiers, this->enemyTownhalls, pos.first, pos.second+1) && isPositionValid(pos.first, pos.second+1)){//side right only when enemy
-				newstate = *this;
-
-				newstate.mySoldiers[i].first = pos.first;
-				newstate.mySoldiers[i].second = pos.second+1;
-				
-				newstate.board[pos.first+1][pos.second+1]=1;
-				newstate.board[pos.first][pos.second]=0;
-
-				update(newstate.enemySoldiers, pos.first+1, pos.second+1);
-				update(newstate.enemyTownhalls, pos.first+1, pos.second+1);
-				res.push_back(newstate);
+					newstate.mySoldiers[i] = relative;
+					newstate.board[relative.first][relative.second]=1;
+					newstate.board[pos.first][pos.second] = 0;
+					newstate.updateCannons();
+					newstate.action = "S "+to_string(pos.first)+" "+to_string(pos.second)+" M "+to_string(relative.first)+" "+to_string(relative.second);
+					// cout<<newstate.action<<"!          ";
+					res.push_back(newstate);
+				}
+				// else cout<<"MOVE INVALID!          ";
 			}
 		}
+		// for(auto can:myCannons){
+		// 	if(can);
+		// }
 		return res;
 	}
 };
 
 //FORWARD DECLARATION FOR MUTUAL RECURSION
-int min_value(State state, int alpha, int beta, int depth);
-int max_value(State state, int alpha, int beta, int depth);
+int min_value(State& state, int alpha, int beta, int depth);
+int max_value(State& state, int alpha, int beta, int depth);
 
 int Eval(State state){
 	int townhallDiff = state.myTownhalls.size()*2 - state.enemyTownhalls.size();
@@ -535,25 +338,25 @@ int Eval(State state){
 }
 
 bool cutoff(State state, int depth){
-	if(state.myTownhalls.size()<=2 || state.enemyTownhalls.size()<=2 || state.mySoldiers.size()==0 || state.enemySoldiers.size()==0 || depth>4){return true;}
+	if(state.myTownhalls.size()<=2 || state.enemyTownhalls.size()<=2 || state.mySoldiers.size()==0 || state.enemySoldiers.size()==0 || depth>3){return true;}
 
 	return false;
 }
 
-int max_value(State state, int alpha, int beta, int depth){
+int max_value(State& state, int alpha, int beta, int depth){
+	// cout<<"Yea\n";
+	// cout<<"Depth on max: "<<depth<<"\n";
 	if(cutoff(state,depth)){return Eval(state);}
 	int v = INT_MIN;
 	for(auto child:state.giveAllChildsOfMax()){
 		v = max(v, min_value(child,alpha,beta,depth+1));
-		if(v>=beta){return v;}
+		if(v>=beta){state.backedupVal = v; return v;}
 		alpha = max(alpha, v);
 	}
 	return v;
 }
 
-int min_value(State state, int alpha, int beta, int depth){
-	// cout<<"Yea";
-	// cout<<"Depth on min: "<<depth<<"\n";
+int min_value(State& state, int alpha, int beta, int depth){
 	if(cutoff(state, depth)){return Eval(state);}
 	int v = INT_MAX;
 	for(auto child:state.giveAllChildsOfMin()){
@@ -564,16 +367,17 @@ int min_value(State state, int alpha, int beta, int depth){
 	return v;
 }
 
-State action(State s1, State s2){
+State action(State& s1, State& s2){
 	return s2;
 }
 
-void alpha_beta_search(State state){
+void alpha_beta_search(State& state){
 	int d = 0;
 	int v = max_value(state, INT_MIN, INT_MAX, d);
+
+	cout<<"\n\n\n\n\nPRINTING VALUEE OF V\n\n\n\n\n\n";
 	for(int i=0;i<state.giveAllChildsOfMax().size();i++){
 		if(min_value((state.giveAllChildsOfMax())[i], INT_MIN, INT_MAX, d+1)==v){
-			// return action(state, (state.giveAllChildsOfMax())[i]);
 			printBoard(action(state, (state.giveAllChildsOfMax())[i]).board);
 			cout<<"\n";
 			break;
@@ -583,6 +387,7 @@ void alpha_beta_search(State state){
 
 int main(int argc, char const *argv[])
 {
+	cout<<"\n";
 	// printBoard(giveInitialBoard());
 	State startNode;
 	startNode.board[2][1] = 0;
@@ -602,12 +407,12 @@ int main(int argc, char const *argv[])
 
 	// displayUniqueSolier(startNode.myTownhalls);
 
-	//// GET ALL CHILDREN
-	// vector<State> itsChildren = startNode.giveAllChildsOfMin();
+	// GET ALL CHILDREN
+	// vector<State> itsChildren = startNode.giveAllChildsOfMax();
 
-	// State secondNode = itsChildren[23];
+	// State secondNode = itsChildren[2];
 	// printBoard(secondNode.board);
-	// cout<<"\n";
+	cout<<"\n";
 
 	// itsChildren = secondNode.giveAllChildsOfMin();
 
@@ -615,9 +420,17 @@ int main(int argc, char const *argv[])
 	// 	printBoard(itsChildren[i].board);
 	// 	cout<<"\n";
 	// }
-	////
+	//
+    
+    time_t start, end;
+    time(&start); 
+    ios_base::sync_with_stdio(false);
 
+    cout<<"\n\n\n\n\nSTART     \n\n\n\n\n\n\n\n\n\n\n";
 	alpha_beta_search(startNode);
+	cout<<"\n\n\n\n\n\nFINISH\n\n\n\n\n\n\n\n\n\n\n\n\n";
+    time(&end);
+    cout<<double(end - start)<<setprecision(5);  
 
 	// cout<<itsChildren.size()<<"\n";
 	return 0;
