@@ -129,13 +129,30 @@ public:
 		backedupVal=INT_MIN;
 	}
 
+	// int eval(){
+	// 	int townhallDiff = myTownhalls.size() - enemyTownhalls.size();
+	// 	int soldierDiff = mySoldiers.size() - enemySoldiers.size();
+	// 	int cannonDiff = myCannons.size() - enemyCannons.size();
+	// 	return 100*townhallDiff + cannonDiff + 2*soldierDiff;
+	// }
+
 	int eval(){
 		// int townhallDiff = myTownhalls.size() - enemyTownhalls.size()*10;
 		// int soldierDiff = mySoldiers.size() - enemySoldiers.size();
 		// int cannonDiff = myCannons.size() - enemyCannons.size()*5;
 		// return 100*townhallDiff + cannonDiff + soldierDiff;
 		int townhallDiff = myTownhalls.size()*2 - enemyTownhalls.size();
-		return townhallDiff + mySoldiers.size()-enemySoldiers.size();
+		//if distance between me and enemy is more, play attacker
+		int xOfMe = SIZE_R-1;
+		for(int i=0;i<mySoldiers.size();i++){
+			if(mySoldiers[i].first<xOfMe){xOfMe = mySoldiers[i].first;}
+		}
+		int xOfEnemy = 0;
+		for(int i=0;i<enemySoldiers.size();i++){
+			if(enemySoldiers[i].first>xOfEnemy){xOfEnemy = enemySoldiers[i].first;}
+		}
+		int xDiff = abs(xOfMe-xOfEnemy);
+		return 2*townhallDiff - xDiff + 2*mySoldiers.size()-2*enemySoldiers.size();
 	}
 
 	bool isEnemyHere(int x, int y){
@@ -222,6 +239,7 @@ public:
 		if(abc.at(6)=='B'){
 		  killOwn(nextPos.first,nextPos.second);
 		  board[nextPos.first][nextPos.second]=0;
+		  updateCannons();
 	    }
 	    else{
 	      kill(prevPos.first,prevPos.second);
@@ -361,15 +379,15 @@ public:
 					newstate.board[back_piece.first][back_piece.second] = 0;
 					newstate.enemySoldiers.push_back(make_pair(move1_front.first,move1_front.second));
 					newstate.enemyCannons[j].first=front_piece;
-          newstate.updateCannons();
+          			newstate.updateCannons();
 					newstate.action = "Cannon "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" M "+to_string(move1_front.first)+" "+to_string(move1_front.second);
 			// cout<<newstate.action<<"!          ";
 					res.push_back(newstate);
 					if(isAllyHere(shoot2_front.first,shoot2_front.second)){
 						newstate = *this;
 						newstate.killOwn(shoot2_front.first,shoot2_front.second);
-            newstate.board[shoot2_front.first][shoot2_front.second] = 0;
-            newstate.updateCannons();
+            			newstate.board[shoot2_front.first][shoot2_front.second] = 0;
+            			newstate.updateCannons();
 						newstate.action = "Cannon "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" B "+to_string(shoot2_front.first)+" "+to_string(shoot2_front.second);
 			// cout<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -378,8 +396,8 @@ public:
 					if(isAllyHere(shoot3_front.first,shoot3_front.second)){
 						newstate = *this;
 						newstate.killOwn(shoot3_front.first,shoot3_front.second);
-            newstate.board[shoot3_front.first][shoot3_front.second] = 0;
-            newstate.updateCannons();
+            			newstate.board[shoot3_front.first][shoot3_front.second] = 0;
+            			newstate.updateCannons();
 						newstate.action = "Cannon "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" B "+to_string(shoot3_front.first)+" "+to_string(shoot3_front.second);
 			// cout<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -495,7 +513,7 @@ public:
 
 			CORDINATE front_piece = add(rel_front,pos), back_piece = add(rel_back,pos),
 					  move1_front = add(front_piece,rel_front), move1_back = add(back_piece,rel_back),
-					  shoot2_front = add(front_piece,rel_front),shoot2_back = add(back_piece,rel_back),
+					  shoot2_front = add(move1_front,rel_front),shoot2_back = add(move1_back,rel_back),
 					  shoot3_front = add(shoot2_front,rel_front),shoot3_back = add(shoot2_back,rel_back);
 
 			if(isPositionValid(move1_front.first,move1_front.second)){
