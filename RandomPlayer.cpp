@@ -26,12 +26,15 @@ enum Neighbour {U,UR,R,DR,D,DL,L,UL};
 CORDINATE myNeighbours[8] = {make_pair(-1,0), make_pair(-1,1), make_pair(0,1), make_pair(2,2), make_pair(2,0), make_pair(2,-2), make_pair(0,-1), make_pair(-1,-1) };
 CORDINATE enemyNeighbours[8] = {make_pair(1,0), make_pair(1,-1), make_pair(0,-1), make_pair(-2,-2), make_pair(-2,0), make_pair(-2,2), make_pair(0,1), make_pair(1,1) };
 
+bool player_type;
+
 int min(int a, int b){
 	return a<b?a:b;
 }
 int max(int a, int b){
 	return a>b?a:b;
 }
+
 
 CORDINATE add(CORDINATE a, CORDINATE b){
 	return make_pair(a.first+b.first,a.second+b.second);
@@ -206,6 +209,30 @@ public:
 		}
 	}
 
+	void modifyBoard(string abc){
+		CORDINATE prevPos = make_pair(int( abc.at(4) - 48 ), int(abc.at(2)-48));
+		CORDINATE nextPos = make_pair(int( abc.at(10) - 48 ), int(abc.at(8)-48));
+	    if(!player_type){
+			prevPos.first = SIZE_R - prevPos.first;
+		  	prevPos.second = SIZE_R - prevPos.second;
+		  	nextPos.first = SIZE_C - nextPos.first;
+		  	nextPos.second = SIZE_C - nextPos.second;
+	    }
+	    cerr<<"opponent played: "<<"S "<< prevPos.first<<" "<<prevPos.second<<" "<< abc.at(6)<<" "<< nextPos.first<<" "<<nextPos.second<<"\n";
+		if(abc.at(6)=='B'){
+		  killOwn(nextPos.first,nextPos.second);
+		  board[nextPos.first][nextPos.second]=0;
+	    }
+	    else{
+	      kill(prevPos.first,prevPos.second);
+	      board[nextPos.first][nextPos.second]=-1;
+	      board[prevPos.first][prevPos.second] = 0;
+	      enemySoldiers.push_back(make_pair(nextPos.first,nextPos.second));
+	      updateCannons();
+	    }
+    
+
+	}
 	void updateTownhalls(){
 		myTownhalls.clear();
 		enemyTownhalls.clear();
@@ -274,7 +301,7 @@ public:
 		vector<State> res;
 		State newstate;
 		// printBoard(this->board);
-		for(int j=0;j<12;j++){
+		for(int j=0;j<enemySoldiers.size();j++){
 			CORDINATE pos = this->enemySoldiers[j];
 		// cout<<"\n\nsoldier:" <<j<<" at "<<pos.first<<","<<pos.second<<"\n\n";
 			for(int i=0;i<8;i++){
@@ -329,17 +356,20 @@ public:
 			if(isPositionValid(move1_front.first,move1_front.second)){
 				if(!board[move1_front.first][move1_front.second]){
 					newstate = *this;
-					newstate.killOwn(back_piece.first,back_piece.second);
+					newstate.kill(back_piece.first,back_piece.second);
 					newstate.board[move1_front.first][move1_front.second]=-1;
 					newstate.board[back_piece.first][back_piece.second] = 0;
 					newstate.enemySoldiers.push_back(make_pair(move1_front.first,move1_front.second));
 					newstate.enemyCannons[j].first=front_piece;
+          newstate.updateCannons();
 					newstate.action = "Cannon "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" M "+to_string(move1_front.first)+" "+to_string(move1_front.second);
 			// cout<<newstate.action<<"!          ";
 					res.push_back(newstate);
 					if(isAllyHere(shoot2_front.first,shoot2_front.second)){
 						newstate = *this;
 						newstate.killOwn(shoot2_front.first,shoot2_front.second);
+            newstate.board[shoot2_front.first][shoot2_front.second] = 0;
+            newstate.updateCannons();
 						newstate.action = "Cannon "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" B "+to_string(shoot2_front.first)+" "+to_string(shoot2_front.second);
 			// cout<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -348,6 +378,8 @@ public:
 					if(isAllyHere(shoot3_front.first,shoot3_front.second)){
 						newstate = *this;
 						newstate.killOwn(shoot3_front.first,shoot3_front.second);
+            newstate.board[shoot3_front.first][shoot3_front.second] = 0;
+            newstate.updateCannons();
 						newstate.action = "Cannon "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" B "+to_string(shoot3_front.first)+" "+to_string(shoot3_front.second);
 			// cout<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -361,17 +393,20 @@ public:
 			if(isPositionValid(move1_back.first,move1_back.second)){
 				if(!board[move1_back.first][move1_back.second]){
 					newstate = *this;
-					newstate.killOwn(front_piece.first,front_piece.second);
+					newstate.kill(front_piece.first,front_piece.second);
 					newstate.board[move1_back.first][move1_back.second]=-1;
 					newstate.board[front_piece.first][front_piece.second] = 0;
 					newstate.enemySoldiers.push_back(make_pair(move1_back.first,move1_back.second));
 					newstate.enemyCannons[j].first=back_piece;
+          newstate.updateCannons();
 					newstate.action = "Cannon "+to_string(front_piece.first)+" "+to_string(front_piece.second)+" M "+to_string(move1_back.first)+" "+to_string(move1_back.second);
 			// cout<<newstate.action<<"!          ";
 					res.push_back(newstate);
 					if(isAllyHere(shoot2_back.first,shoot2_back.second)){
 						newstate = *this;
 						newstate.killOwn(shoot2_back.first,shoot2_back.second);
+            newstate.board[shoot2_back.first][shoot2_back.second] = 0;
+            newstate.updateCannons();
 						newstate.action = "Cannon "+to_string(front_piece.first)+" "+to_string(front_piece.second)+" B "+to_string(shoot2_back.first)+" "+to_string(shoot2_back.second);
 			// cout<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -380,6 +415,8 @@ public:
 					if(isAllyHere(shoot3_back.first,shoot3_back.second)){
 						newstate = *this;
 						newstate.killOwn(shoot3_back.first,shoot3_back.second);
+            newstate.board[shoot3_back.first][shoot3_back.second] = 0;
+            newstate.updateCannons();
 						newstate.action = "Cannon "+to_string(front_piece.first)+" "+to_string(front_piece.second)+" B "+to_string(shoot3_back.first)+" "+to_string(shoot3_back.second);
 			// cout<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -392,6 +429,8 @@ public:
 			}	
 		}
 		std::sort(res.begin(), res.end());
+		reverse(res.begin(),res.end());
+		if(res[0].backedupVal < res[10].backedupVal){cout<<"\nRight backing up\n";}
 		return res;
 	}
 
@@ -400,7 +439,7 @@ public:
 		vector<State> res;
 		State newstate;
 			// printBoard(this->board);
-		for(int j=0;j<12;j++){
+		for(int j=0;j<mySoldiers.size();j++){
 			CORDINATE pos = this->mySoldiers[j];
 			// cout<<"\n\nsoldier:" <<j<<" at "<<pos.first<<","<<pos.second<<"\n\n";
 			for(int i=0;i<8;i++){
@@ -462,11 +501,12 @@ public:
 			if(isPositionValid(move1_front.first,move1_front.second)){
 				if(!board[move1_front.first][move1_front.second]){					// MOVE CANNON
 					newstate = *this;
-					newstate.kill(back_piece.first,back_piece.second);
+					newstate.killOwn(back_piece.first,back_piece.second);
 					newstate.board[move1_front.first][move1_front.second]=1;
 					newstate.board[back_piece.first][back_piece.second] = 0;
 					newstate.mySoldiers.push_back(make_pair(move1_front.first,move1_front.second));
 					newstate.myCannons[j].first=front_piece;
+          newstate.updateCannons();
 					newstate.action = "S "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" M "+to_string(move1_front.first)+" "+to_string(move1_front.second);
 			// cout<<"CANNO"<<newstate.action<<"!          ";
 					res.push_back(newstate);
@@ -474,7 +514,7 @@ public:
 						newstate = *this;
 						newstate.kill(shoot2_front.first,shoot2_front.second);
 						newstate.board[shoot2_front.first][shoot2_front.second] = 0;
-									// newstate.updateTownhalls();
+						newstate.updateCannons();
 						newstate.action = "S "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" B "+to_string(shoot2_front.first)+" "+to_string(shoot2_front.second);
 						
 			// cout<<"CANNO"<<newstate.action<<"!          ";
@@ -485,7 +525,7 @@ public:
 						newstate = *this;
 						newstate.kill(shoot3_front.first,shoot3_front.second);
 						newstate.board[shoot3_front.first][shoot3_front.second] = 0;
-									// newstate.updateTownhalls();
+						newstate.updateCannons();
 						newstate.action = "S "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" B "+to_string(shoot3_front.first)+" "+to_string(shoot3_front.second);
 			// cout<<"CANNO"<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -501,11 +541,12 @@ public:
 			if(isPositionValid(move1_back.first,move1_back.second)){
 				if(!board[move1_back.first][move1_back.second]){
 					newstate = *this;
-					newstate.kill(front_piece.first,front_piece.second);
+					newstate.killOwn(front_piece.first,front_piece.second);
 					newstate.board[move1_back.first][move1_back.second]=1;
 					newstate.board[front_piece.first][front_piece.second] = 0;
 					newstate.mySoldiers.push_back(make_pair(move1_back.first,move1_back.second));
 					newstate.myCannons[j].first=back_piece;
+          newstate.updateCannons();
 					newstate.action = "S "+to_string(front_piece.first)+" "+to_string(front_piece.second)+" M "+to_string(move1_back.first)+" "+to_string(move1_back.second);
 			// cout<<"CANNO"<<newstate.action<<"!          ";
 					res.push_back(newstate);
@@ -513,6 +554,7 @@ public:
 						newstate = *this;
 						newstate.kill(shoot2_back.first,shoot2_back.second);
 						newstate.board[shoot2_back.first][shoot2_back.second] = 0;
+            newstate.updateCannons();
 						newstate.action = "S "+to_string(front_piece.first)+" "+to_string(front_piece.second)+" B "+to_string(shoot2_back.first)+" "+to_string(shoot2_back.second);
 			// cout<<"CANNO"<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -522,6 +564,7 @@ public:
 						newstate = *this;
 						newstate.kill(shoot3_back.first,shoot3_back.second);
 						newstate.board[shoot3_back.first][shoot3_back.second] = 0;
+            newstate.updateCannons();
 						newstate.action = "S "+to_string(front_piece.first)+" "+to_string(front_piece.second)+" B "+to_string(shoot3_back.first)+" "+to_string(shoot3_back.second);
 			// cout<<"CANNO"<<newstate.action<<"!          ";
 						res.push_back(newstate);
@@ -535,6 +578,7 @@ public:
 			// cout<<"SHOOT.3 INVALID!          ";}	
 		}
 		std::sort(res.begin(), res.end());
+		if(res[0].backedupVal > res[10].backedupVal){cout<<"\nRight backing up\n";}
 		return res;
 	}
 };
@@ -591,7 +635,7 @@ State alpha_beta_search(State& state, int threshold){
 	int d = 0;
 	int v = max_value(state, INT_MIN, INT_MAX, d, threshold);
 	vector<State> childsMax = state.giveAllChildsOfMax();
-	cout<<"\n\nPRINTING VALUEE OF V\n\n";
+	// cout<<"\n\nPRINTING VALUEE OF V\n\n";
 	for(int i=0;i<childsMax.size();i++){
 		if(min_value((childsMax)[i], INT_MIN, INT_MAX, d+1, threshold)==v){
 			// printBoard(action(state, (childsMax)[i]).board);
@@ -603,83 +647,102 @@ State alpha_beta_search(State& state, int threshold){
 	return childsMax[0];
 }
 
-void ids_alpha_beta_search(State& state){
+State ids_alpha_beta_search(State& state){
 	int threshold = 1;
 	const clock_t begin_time = clock();
-	State bestTillNow;
-	while(float( clock () - begin_time ) <2000000){
-		State temp = alpha_beta_search(state, threshold);
-		if(bestTillNow.eval() < temp.eval()) bestTillNow = temp;
+	State temp = alpha_beta_search(state, threshold++);
+	State bestTillNow = temp;
+	while(float( clock () - begin_time ) <1000000){
+		temp = alpha_beta_search(state, threshold);
+		if(bestTillNow.eval() < temp.eval()) {bestTillNow = temp; cerr<<"best = temp\n";}
 		threshold++;
-		printBoard(bestTillNow.board);
-		cout<<(float)(clock()-begin_time)/1000000<<endl;
+		// printBoard(bestTillNow.board);
+		// cout<<(float)(clock()-begin_time)/1000000<<endl;
 	}
-	cout<<"\n";
-	cout<<"Depth gone: "<<threshold<<endl;
+	// cout<<"\n";
+	// cout<<"Depth gone: "<<threshold<<endl;
+	return bestTillNow;
+}
+
+
+void mainController(){
+	string  firstInput = "";
+	getline(cin, firstInput);//1 8 8 150
+	// cout<<firstInput;
+	int playerID;// 1 for my turn first
+	playerID = (int)(firstInput.at(0)-48);
+	cerr<<"player id "<<playerID<<"\n";
+	// cin>>playerID;
+	State initialState;
+	string enemyMove="";
+	const clock_t begin_time = clock();
+	if(playerID==1){
+    	player_type = true;
+		
+	} else {
+		player_type = false;
+	}
+	cerr<<"starting search"<<"\n";
+	State outstate = ids_alpha_beta_search(initialState);
+	string outmsg = outstate.action;
+	initialState = outstate;
+	CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
+	CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
+	cerr<<"finished search with msg = S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+    if(player_type){
+    	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+    }
+	
+
+	while(float(clock() - begin_time) < 150000000){
+		getline(cin, enemyMove);//1 8 8 150
+		initialState.modifyBoard(enemyMove);
+		outstate = ids_alpha_beta_search(initialState);
+		outmsg = outstate.action;
+		initialState = outstate;
+		CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
+		CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
+	    if(!player_type){
+	    	prevPos.first = SIZE_R - prevPos.first;
+	      	prevPos.second = SIZE_R - prevPos.second;
+	      	nextPos.first = SIZE_C - nextPos.first;
+	      	nextPos.second = SIZE_C - nextPos.second;
+	    	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+	    }
+	    else 
+	    	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+	}
 }
 
 int main(int argc, char const *argv[])
 {
-	// cout<<"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSTART\n\n\n";
-	// printBoard(giveInitialBoard());
-	State startNode;
-	startNode.board[2][1] = 0;
-	startNode.board[4][1] = -1;
+	// State startNode;
+	// startNode.board[2][1] = 0;
+	// startNode.board[4][1] = -1;
 
 
-	startNode.board[0][3] = 0;
-	startNode.board[3][3] = -1;
+	// startNode.board[0][3] = 0;
+	// startNode.board[3][3] = -1;
 
-	startNode.board[1][3] = 0;
-	startNode.board[4][3] = -1;
+	// startNode.board[1][3] = 0;
+	// startNode.board[4][3] = -1;
 
-	for(int t = 0;t<startNode.enemySoldiers.size();t++){
-		if(startNode.enemySoldiers[t].first==2 && startNode.enemySoldiers[t].second==1){
-			startNode.enemySoldiers[t].first = 4;
-			// startNode.enemySoldiers.push_back({{4,1}, startNode.enemySoldiers[t].second});
-			// startNode.enemySoldiers.erase(startNode.enemySoldiers.begin() + t);
-		}
-		if(startNode.enemySoldiers[t].first==0 && startNode.enemySoldiers[t].second==3){
-			startNode.enemySoldiers[t].first = 3;
-		}
-		if(startNode.enemySoldiers[t].first==1 && startNode.enemySoldiers[t].second==3){
-			startNode.enemySoldiers[t].first = 4;
-		}
-	}
-	startNode.updateCannons();
-	
-	printBoard(startNode.board);
-	cout<<"\n";
-
-	// cout<<isAllyHere(startNode.mySoldiers, startNode.myTownhalls, 6, 3);
-
-	// displayUniqueSolier(startNode.myTownhalls);
-
-	// GET ALL CHILDREN
-	// vector<State> itsChildren = startNode.giveAllChildsOfMax();
-
-	// State secondNode = itsChildren[2];
-	// printBoard(secondNode.board);
-	cout<<"\n";
-
-	// itsChildren = secondNode.giveAllChildsOfMin();
-
-	// for(int i=0;i<itsChildren.size();i++){
-	// 	printBoard(itsChildren[i].board);
-	// 	cout<<"\n";
+	// for(int t = 0;t<startNode.enemySoldiers.size();t++){
+	// 	if(startNode.enemySoldiers[t].first==2 && startNode.enemySoldiers[t].second==1){
+	// 		startNode.enemySoldiers[t].first = 4;
+	// 		// startNode.enemySoldiers.push_back({{4,1}, startNode.enemySoldiers[t].second});
+	// 		// startNode.enemySoldiers.erase(startNode.enemySoldiers.begin() + t);
+	// 	}
+	// 	if(startNode.enemySoldiers[t].first==0 && startNode.enemySoldiers[t].second==3){
+	// 		startNode.enemySoldiers[t].first = 3;
+	// 	}
+	// 	if(startNode.enemySoldiers[t].first==1 && startNode.enemySoldiers[t].second==3){
+	// 		startNode.enemySoldiers[t].first = 4;
+	// 	}
 	// }
-	//
-    
-    time_t start, end;
-    time(&start); 
-    ios_base::sync_with_stdio(false);
+	// startNode.updateCannons();
 
-    ids_alpha_beta_search(startNode);
-	// alpha_beta_search(startNode, 3);
-	cout<<"\n\n\n\nFINISH\n\n";
-    time(&end);
-    cout<<double(end - start)<<setprecision(5);  
-
-	// cout<<itsChildren.size()<<"\n";
+    // cout<<ids_alpha_beta_search(startNode);
+	mainController();
 	return 0;
 }
