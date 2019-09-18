@@ -164,20 +164,20 @@ public:
 
 
 		// float diffCannon = 1.2*myCannons.size() - enemyCannons.size();
-		float townhallDiff = 1.2*myTownhalls.size() - enemyTownhalls.size();
-		float soldierDiff = 1.2*mySoldiers.size()-enemySoldiers.size();
+		float townhallDiff = 1.1*myTownhalls.size() - enemyTownhalls.size();
+		float soldierDiff = 1.1*mySoldiers.size()-enemySoldiers.size();
 
 		float diffC =0.0,eff;
 		for(auto can: myCannons){
 			if(can.second==0)
-				eff=1.0;
+				eff=0.92;
 			else if(can.second==1)
 				eff=0.87;
 			else if(can.second==2){
 				if(can.first.first==6)
-					eff=0.8;
+					eff=0.5;
 				else if(can.first.first==5)
-					eff = 0.6;
+					eff = 0.4;
 				else eff = 0.2;
 			}
 			else
@@ -199,7 +199,7 @@ public:
 			if(!frontfree && !backfree)
 				eff/=10;
 
-			diffC+=1.2*(eff);
+			diffC+=1.1*(eff);
 		}
 		for(auto can: enemyCannons){
 			if(can.second==0)
@@ -235,7 +235,7 @@ public:
 			diffC-=(eff);
 		}
 
-		return 100*townhallDiff  + diffC + 3*soldierDiff;
+		return 100*townhallDiff  + diffC + 3.2*soldierDiff;
 	}
 
 	bool isEnemyHere(int x, int y){
