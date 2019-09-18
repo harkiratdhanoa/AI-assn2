@@ -77,7 +77,7 @@ vector<vector<int> > giveInitialBoard(){
 
 void printBoard(vector<vector<int> > board){
 	int r = board.size();
-	int c = board[0].size();
+	int c = board.front().size();
 	for(int i=0;i<r;i++){
 		for(int j=0;j<c;j++){
 			if(board[i][j]>=0)
@@ -165,7 +165,43 @@ public:
 		float townhallDiff = 1.2*myTownhalls.size() - enemyTownhalls.size();
 		float soldierDiff = 1.2*mySoldiers.size()-enemySoldiers.size();
 
-		return 100*townhallDiff  + diffCannon + 3*soldierDiff;
+		float diffC =0.0;
+		for(auto can: myCannons){
+			float eff;
+			if(can.second==0)
+				eff=1.0;
+			else if(can.second==1)
+				eff=0.87;
+			else if(can.second==2){
+				if(can.first.first==6)
+					eff=0.8;
+				else if(can.first.first==5)
+					eff = 0.6;
+				else eff = 0.2;
+			}
+			else
+				eff=0.87;
+			diffC+=1.2*(eff);
+		}
+		for(auto can: enemyCannons){
+			float eff;
+			if(can.second==0)
+				eff=1.0;
+			else if(can.second==1)
+				eff=0.87;
+			else if(can.second==2){
+				if(can.first.first==6)
+					eff=0.8;
+				else if(can.first.first==5)
+					eff = 0.6;
+				else eff = 0.2;
+			}
+			else
+				eff=0.87;
+			diffC-=1*(eff);
+		}
+
+		return 100*townhallDiff  + diffC + 4*soldierDiff;
 	}
 
 	bool isEnemyHere(int x, int y){
@@ -272,7 +308,7 @@ public:
 		for(int i=0;i<4;i+=2){
 			if(board[SIZE_R-1][2*i+1]==2)
 			myTownhalls.push_back(make_pair(SIZE_R-1, 2*i+1)); // T1 at (r-1,1) | T2 at (r-1,3);
-			if(board[0][2*i]==-2)
+			if(board.front()[2*i]==-2)
 			enemyTownhalls.push_back(make_pair(0, 2*i));
 		}
 	}
@@ -483,7 +519,7 @@ public:
 		}
 		std::sort(res.begin(), res.end());
 		reverse(res.begin(),res.end());
-		if(res[0].eval() > res[10].eval()){cerr<<"\nRes[0] > res[10] in MIN\n";}
+		if(res.front().eval() > res.back().eval()){cerr<<"\nRes.front() > res.back() in MIN\n";}
 		return res;
 	}
 
@@ -655,7 +691,7 @@ public:
 			// cout<<"SHOOT.3 INVALID!          ";}	
 		}
 		std::sort(res.begin(), res.end());
-		if(res[0].eval() < res[10].eval()){cerr<<"\nRes[0] > res[10] in MIN\n";}
+		if(res.front().eval() < res.back().eval()){cerr<<"\nRes.front() > res.back() in MAX\n";}
 		return res;
 	}
 };
@@ -725,9 +761,9 @@ State alpha_beta_search(State& state, int threshold){
 			return (childsMax)[i];
 		}
 	}
-	if(childsMax[0].backedupVal<childsMax[10].backedupVal)
+	if(childsMax.front().backedupVal<childsMax.back().backedupVal)
 		cerr<<" \n\n\n\n\nCORRECT  \n\n\n\n\n";
-	return childsMax[0];
+	return childsMax.front();
 }
 
 State ids_alpha_beta_search(State& state){
@@ -739,7 +775,8 @@ State ids_alpha_beta_search(State& state){
 		temp = alpha_beta_search(state, threshold);
 		// if(float( clock () - begin_time ) >=3500000)
 		// 	return bestTillNow;
-		if(bestTillNow.eval() < temp.eval()) {bestTillNow = temp; cerr<<"best = temp\n";}
+		// if(bestTillNow.eval() < temp.eval()) 
+			{bestTillNow = temp; cerr<<"best = temp\n";}
 		threshold++;
 		// printBoard(bestTillNow.board);
 		// cout<<(float)(clock()-begin_time)/3500000<<endl;
