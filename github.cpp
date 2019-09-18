@@ -119,7 +119,7 @@ public:
 					mySoldiers.push_back(make_pair(board.size()-i-1,j));
 					enemySoldiers.push_back(make_pair(i, j+1));
 				}
-				if(i==2) {
+				if(i==1) {
 					myCannons.push_back(make_pair(make_pair(board.size()-i-1,j), Vertical));
 					enemyCannons.push_back(make_pair(make_pair(i, j+1), Vertical));
 				}
@@ -162,7 +162,7 @@ public:
 		int diffCannon = myCannons.size() - enemyCannons.size();
 
 
-		return 100*townhallDiff - xDiff + 10*diffCannon + 2*mySoldiers.size()-2*enemySoldiers.size();
+		return 100*townhallDiff - 3*xDiff + 2*diffCannon + 2*mySoldiers.size()-2*enemySoldiers.size();
 	}
 
 	bool isEnemyHere(int x, int y){
@@ -245,14 +245,16 @@ public:
 		  	nextPos.first = SIZE_R -1 - nextPos.first;
 		  	nextPos.second = SIZE_C -1 - nextPos.second;
 	    }
-	    // cerr<<"opponent played: "<<"S "<< prevPos.first<<" "<<prevPos.second<<" "<< abc.at(6)<<" "<< nextPos.first<<" "<<nextPos.second<<"\n";
+	    cerr<<"opponent played: "<<"S "<< prevPos.first<<" "<<prevPos.second<<" "<< abc.at(6)<<" "<< nextPos.first<<" "<<nextPos.second<<"\n";
 		if(abc.at(6)=='B'){
 		  killOwn(nextPos.first,nextPos.second);
 		  board[nextPos.first][nextPos.second]=0;
 		  updateCannons();
 	    }
 	    else{
+
 	      kill(prevPos.first,prevPos.second);
+	      killOwn(nextPos.first,nextPos.second);
 	      board[nextPos.first][nextPos.second]=-1;
 	      board[prevPos.first][prevPos.second] = 0;
 	      enemySoldiers.push_back(make_pair(nextPos.first,nextPos.second));
@@ -542,6 +544,10 @@ public:
 					newstate.myCannons[j].first=front_piece;
           			newstate.updateCannons();
 					newstate.action = "S "+to_string(back_piece.first)+" "+to_string(back_piece.second)+" M "+to_string(move1_front.first)+" "+to_string(move1_front.second);
+					// newstate.action = to_string(move1_front.first)+" "+to_string(move1_front.second)+to_string(front_piece.first)+" "+to_string(front_piece.first)+" / "+ to_string(pos.first)+" "+to_string(pos.first)+" / "+
+					// to_string(back_piece.first)+" "+to_string(back_piece.second)+" M ";
+					// newstate.action = "rel "+to_string(rel_front.first)+" "+to_string(rel_front.second)+" Mid "+to_string(pos.first)+" "+to_string(pos.second)
+					+"type: "+to_string(type);
 					res.push_back(newstate);
 					
 					if(isEnemyHere(shoot2_front.first,shoot2_front.second)){
@@ -701,7 +707,7 @@ void mainController(){
 	cerr<<"player id "<<playerID<<"\n";
 	// cin>>playerID;
 	State initialState;
-	string enemyMove="";
+	string enemyMove="",outmsg="";
 	const clock_t begin_time = clock();
 	if(playerID==1){
     	player_type = true;
@@ -709,15 +715,17 @@ void mainController(){
 	} else {
 		player_type = false;
 	}
-	cerr<<"starting search"<<"\n";
-	State outstate = ids_alpha_beta_search(initialState);
-	string outmsg = outstate.action;
-	cerr<<"wanna do: "<<outmsg<<"\n";
-	initialState = outstate;
-	CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
-	CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
+	State outstate;
 	// cerr<<"finished search with msg = S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
-    if(player_type){
+    if(player_type){		// PLAYER 1 PLAYS FIRST MOVE
+
+		cerr<<"starting search"<<"\n";
+		outstate = ids_alpha_beta_search(initialState);
+		outmsg = outstate.action;
+		cerr<<"wanna do: "<<outmsg<<"\n";
+		initialState = outstate;
+		CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
+		CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
     	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
     }
 	
@@ -729,6 +737,7 @@ void mainController(){
 		outmsg = outstate.action;
 		cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
+		cerr<<"just about to do: "<<outmsg<<"\n";
 		CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
 		CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
 	    if(!player_type){
@@ -736,7 +745,9 @@ void mainController(){
 	      	prevPos.second = SIZE_C -1 - prevPos.second;
 	      	nextPos.first = SIZE_R -1 - nextPos.first;
 	      	nextPos.second = SIZE_C -1 - nextPos.second;
+	      	cerr<<"did this: "<<outmsg<<"\n";
 	    	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+	    	cerr<<"literally did this: "<<outmsg<<"\n";
 	    }
 	    else 
 	    	{cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";}
