@@ -766,12 +766,12 @@ State alpha_beta_search(State& state, int threshold){
 	return childsMax.front();
 }
 
-State ids_alpha_beta_search(State& state){
+State ids_alpha_beta_search(State& state, int timeconstraint){
 	int threshold = 1;
 	begin_time=clock();
 	State temp = alpha_beta_search(state, threshold++);
 	State bestTillNow = temp;
-	while(float( clock () - begin_time ) <3500000){
+	while(float( clock () - begin_time ) <timeconstraint * 35/20 * 100000){
 		temp = alpha_beta_search(state, threshold);
 		// if(float( clock () - begin_time ) >=3500000)
 		// 	return bestTillNow;
@@ -820,10 +820,54 @@ void mainController(){
     }
 	
 
-	while(float(clock() - begin_time) < 900000000){
+	while(float(clock() - begin_time) < 200000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 20); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outmsg = outstate.action;
+// cerr<<"wanna do: "<<outmsg<<"\n";
+		initialState = outstate;
+// cerr<<"just about to do: "<<outmsg<<"\n";
+		CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
+		CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
+	    if(!player_type){
+	    	prevPos.first = SIZE_R -1 - prevPos.first;
+	      	prevPos.second = SIZE_C -1 - prevPos.second;
+	      	nextPos.first = SIZE_R -1 - nextPos.first;
+	      	nextPos.second = SIZE_C -1 - nextPos.second;
+// cerr<<"did this: "<<outmsg<<"\n";
+	    	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+// cerr<<"literally did this: "<<outmsg<<"\n";
+	    }
+	    else 
+	    	{cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";}
+	}
+	while(float(clock() - begin_time) < 400000000){
+		getline(cin, enemyMove);
+		initialState.modifyBoard(enemyMove);
+		outstate = ids_alpha_beta_search(initialState, 40); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outmsg = outstate.action;
+// cerr<<"wanna do: "<<outmsg<<"\n";
+		initialState = outstate;
+// cerr<<"just about to do: "<<outmsg<<"\n";
+		CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
+		CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
+	    if(!player_type){
+	    	prevPos.first = SIZE_R -1 - prevPos.first;
+	      	prevPos.second = SIZE_C -1 - prevPos.second;
+	      	nextPos.first = SIZE_R -1 - nextPos.first;
+	      	nextPos.second = SIZE_C -1 - nextPos.second;
+// cerr<<"did this: "<<outmsg<<"\n";
+	    	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
+// cerr<<"literally did this: "<<outmsg<<"\n";
+	    }
+	    else 
+	    	{cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";}
+	}
+	while(float(clock() - begin_time) < 300000000){
+		getline(cin, enemyMove);
+		initialState.modifyBoard(enemyMove);
+		outstate = ids_alpha_beta_search(initialState, 30); cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
