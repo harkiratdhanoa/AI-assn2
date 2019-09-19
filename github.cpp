@@ -27,6 +27,8 @@ enum Orient { Vertical, Secondary, Horizontal, Primary };
 CORDINATE cannonNeighbours[8] ={make_pair(-1,0), make_pair(-1,1), make_pair(0,1), make_pair(1,1),make_pair(1,0), make_pair(1,-1), make_pair(0,-1), make_pair(-1,-1)};
 CORDINATE cannonENeighbours[8] ={make_pair(1,0), make_pair(1,-1), make_pair(0,-1), make_pair(-1,-1),make_pair(-1,0), make_pair(-1,1), make_pair(0,1), make_pair(1,1)};
 
+int adj[5] = {0,1,2,6,7};
+
 enum Neighbour {U,UR,R,DR,D,DL,L,UL};
 
 CORDINATE myNeighbours[8] = {make_pair(-1,0), make_pair(-1,1), make_pair(0,1), make_pair(2,2), make_pair(2,0), make_pair(2,-2), make_pair(0,-1), make_pair(-1,-1) };
@@ -162,26 +164,32 @@ public:
 			
 		//cannon diff
 
+		srand(time(NULL));
+		float t = ((double)rand()/(RAND_MAX));
 
 		// float diffCannon = 1.2*myCannons.size() - enemyCannons.size();
-		float townhallDiff = 1.1*myTownhalls.size() - enemyTownhalls.size();
-		float soldierDiff = 1.1*mySoldiers.size()-enemySoldiers.size();
+		float townhallDiff = 1.2*myTownhalls.size() - enemyTownhalls.size();
+		float soldierDiff = 1.1*mySoldiers.size() - enemySoldiers.size();
+		float totTown = myTownhalls.size()+enemyTownhalls.size(), totSold = mySoldiers.size()+enemySoldiers.size(), totCan = myCannons.size()+enemyCannons.size();
 
-		float diffC =0.0,eff;
+		float diffC =0.0,eff=0.0;
+
 		for(auto can: myCannons){
 			if(can.second==0)
 				eff=0.92;
-			else if(can.second==1)
-				eff=0.87;
 			else if(can.second==2){
 				if(can.first.first==6)
-					eff=0.5;
+					eff=0.39;
 				else if(can.first.first==5)
-					eff = 0.4;
-				else eff = 0.2;
+					eff = 0.27;
+				else eff = 0.11;
 			}
-			else
-				eff=0.87;
+			else{
+				if(t<0.5){eff=1.0;} else {eff=0.87;}
+				// eff=0.87;
+				srand(time(NULL));
+				t = ((double)rand()/(RAND_MAX));
+			}
 
 			CORDINATE rel_front = cannonNeighbours[can.second],rel_back = cannonNeighbours[can.second+4],
 					  front_piece = add(rel_front,can.first), back_piece = add(rel_back,can.first),
@@ -195,26 +203,29 @@ public:
 				if(!board[move1_back.first][move1_back.second])
 					backfree=true;
 			if(!frontfree || !backfree)
-				eff/=2;
+				eff/=1.35;
 			if(!frontfree && !backfree)
-				eff/=10;
+				eff/=5;
 
-			diffC+=1.1*(eff);
+			diffC+=1.0*(eff);
 		}
+		eff=0.0;
 		for(auto can: enemyCannons){
 			if(can.second==0)
 				eff=0.92;
-			else if(can.second==1)
-				eff=0.87;
 			else if(can.second==2){
 				if(can.first.first==6)
-					eff=0.5;
+					eff=0.39;
 				else if(can.first.first==5)
-					eff = 0.4;
-				else eff = 0.2;
+					eff = 0.27;
+				else eff = 0.11;
 			}
-			else
-				eff=0.87;
+			else{
+				if(t<0.5){eff=1;} else {eff=0.87;}
+				// eff=0.87;
+				srand(time(NULL));
+				t = ((double)rand()/(RAND_MAX));
+			}
 
 			CORDINATE rel_front = cannonENeighbours[can.second],rel_back = cannonENeighbours[can.second+4],
 					  front_piece = add(rel_front,can.first), back_piece = add(rel_back,can.first),
@@ -228,14 +239,15 @@ public:
 				if(!board[move1_back.first][move1_back.second])
 					backfree=true;
 			if(!frontfree || !backfree)
-				eff/=2;
+				eff/=1.35;
 			if(!frontfree && !backfree)
-				eff/=10;
+				eff/=5;
 
 			diffC-=(eff);
 		}
-
-		return 100*townhallDiff  + diffC + 3.2*soldierDiff;
+		// if(10000<soldierDiff)
+		// 	cerr<<"ma soldier: "+to_string(mySoldiers.size())+"his soldiers: "+to_string(enemySoldiers.size())+"\n";
+		return 100.0*townhallDiff + diffC + 4.0*soldierDiff;
 	}
 
 	bool isEnemyHere(int x, int y){
@@ -269,17 +281,25 @@ public:
 						if(x==x_enemy-i && y==y_enemy-j){return true;}
 					}
 				}
+				for(auto rel:adj){
+					if(v == make_pair((myNeighbours[rel].first+x),(myNeighbours[rel].second+y)))
+						return true;
+				}
 			}
 		else
 			for(auto v: mySoldiers){
-			int x_enemy = v.first;
-			int y_enemy = v.second;
-			for(int i=-1;i<2;i++){
-				for(int j=-1;j<2;j++){
-					if(x==x_enemy-i && y==y_enemy-j){return true;}
+				int x_enemy = v.first;
+				int y_enemy = v.second;
+				for(int i=-1;i<2;i++){
+					for(int j=-1;j<2;j++){
+						if(x==x_enemy-i && y==y_enemy-j){return true;}
+					}
+				}
+				for(auto rel:adj){
+					if(v == make_pair((enemyNeighbours[rel].first+x),(enemyNeighbours[rel].second+y)))
+						return true;
 				}
 			}
-		}
 		return false;
 	}
 
@@ -289,7 +309,8 @@ public:
 				enemySoldiers.erase(enemySoldiers.begin()+i);
 				break;
 			}
-			else if(i< enemyTownhalls.size() && enemyTownhalls[i].first == x && enemyTownhalls[i].second == y){
+			else if(i< enemyTownhalls.size())
+				if(enemyTownhalls[i].first == x && enemyTownhalls[i].second == y){
 				enemyTownhalls.erase(enemyTownhalls.begin()+i);
 				break;
 			}
@@ -302,7 +323,8 @@ public:
 				mySoldiers.erase(mySoldiers.begin()+i);
 				break;
 			}
-			else if(i< myTownhalls.size() && myTownhalls[i].first ==x && myTownhalls[i].second == y){
+			else if(i< myTownhalls.size())
+				if(myTownhalls[i].first ==x && myTownhalls[i].second == y){
 				myTownhalls.erase(myTownhalls.begin()+i);
 				break;
 			}
@@ -553,7 +575,7 @@ public:
 		}
 		std::sort(res.begin(), res.end());
 		reverse(res.begin(),res.end());
-		if(res.front().eval() > res.back().eval()){cerr<<"\nRes.front() > res.back() in MIN\n";}
+		// if(res.front().eval() > res.back().eval()){cerr<<"\nRes.front() > res.back() in MIN\n";}
 		return res;
 	}
 
@@ -725,21 +747,21 @@ public:
 			// cout<<"SHOOT.3 INVALID!          ";}	
 		}
 		std::sort(res.begin(), res.end());
-		if(res.front().eval() < res.back().eval()){cerr<<"\nRes.front() > res.back() in MAX\n";}
+		// if(res.front().eval() < res.back().eval()){cerr<<"\nRes.front() > res.back() in MAX\n";}
 		return res;
 	}
 };
 
 //FORWARD DECLARATION FOR MUTUAL RECURSION
-int min_value(State& state, int alpha, int beta, int depth, int threshold,int timeconstraint);
-int max_value(State& state, int alpha, int beta, int depth, int threshold,int timeconstraint);
+int min_value(State& state, int alpha, int beta, int depth, int threshold,float timeconstraint,bool override);
+int max_value(State& state, int alpha, int beta, int depth, int threshold,float timeconstraint,bool override);
 
 bool cutoff(State& state, int depth, int threshold){
 	if(state.myTownhalls.size()<=2 || state.enemyTownhalls.size()<=2 || state.mySoldiers.size()==0 || state.enemySoldiers.size()==0 || depth>threshold){return true;}
 	return false;
 }
 
-int max_value(State& state, int alpha, int beta, int depth, int threshold,int timeconstraint){
+int max_value(State& state, int alpha, int beta, int depth, int threshold,float timeconstraint, bool override){
 	if(cutoff(state, depth, threshold) /*&& isEssentialToGoDown(state, true)==false*/){
         state.backedupVal = state.eval(); 
         //DEBUG
@@ -749,16 +771,16 @@ int max_value(State& state, int alpha, int beta, int depth, int threshold,int ti
     }
 	int v = INT_MIN;
 	for(auto child:state.giveAllChildsOfMax()){
-		if(float( clock () - begin_time ) >=timeconstraint*35/20*1000000)
+		if(float( clock () - begin_time ) >=timeconstraint*25*1000000/20 && !override)
 			return v;
-		v = max(v, min_value(child,alpha,beta,depth+1, threshold,timeconstraint));
+		v = max(v, min_value(child,alpha,beta,depth+1, threshold,timeconstraint,override));
 		if(v>=beta){state.backedupVal = v; return v;}
 		alpha = max(alpha, v);
 	}
 	return v;
 }
 
-int min_value(State& state, int alpha, int beta, int depth, int threshold,int timeconstraint){
+int min_value(State& state, int alpha, int beta, int depth, int threshold,float timeconstraint,bool override){
 	if(cutoff(state, depth, threshold) /*&& isEssentialToGoDown(state, false)==false*/){
         state.backedupVal = state.eval(); 
         //DEBUG
@@ -768,9 +790,9 @@ int min_value(State& state, int alpha, int beta, int depth, int threshold,int ti
     }
 	int v = INT_MAX;
 	for(auto child:state.giveAllChildsOfMin()){
-		if(float( clock () - begin_time ) >=timeconstraint*35/20*1000000)
+		if(float( clock () - begin_time ) >=timeconstraint*25*1000000/20 && !override)
 			return v;
-		v = min(v, max_value(child, alpha, beta, depth+1, threshold,timeconstraint));
+		v = min(v, max_value(child, alpha, beta, depth+1, threshold,timeconstraint,override));
 		if(v<=alpha){state.backedupVal = v; return v;}
 		beta = beta<v ? beta: v;
 	}
@@ -782,13 +804,13 @@ State action(State& s1, State& s2){
 	return s2;
 }
 
-State alpha_beta_search(State& state, int threshold,int timeconstraint){
+State alpha_beta_search(State& state, int threshold,float timeconstraint,bool override){
 	int d = 0;
-	int v = max_value(state, INT_MIN, INT_MAX, d, threshold,timeconstraint);
+	int v = max_value(state, INT_MIN, INT_MAX, d, threshold,timeconstraint,override);
 	vector<State> childsMax = state.giveAllChildsOfMax();
 	// cout<<"\n\nPRINTING VALUEE OF V\n\n";
 	for(int i=0;i<childsMax.size();i++){
-		if(min_value((childsMax)[i], INT_MIN, INT_MAX, d+1, threshold,timeconstraint)==v){
+		if(min_value((childsMax)[i], INT_MIN, INT_MAX, d+1, threshold,timeconstraint,override)==v){
 			// printBoard(action(state, (childsMax)[i]).board);
 			// cout<<"\n";
 			// break;
@@ -800,20 +822,29 @@ State alpha_beta_search(State& state, int threshold,int timeconstraint){
 	return childsMax.front();
 }
 
-State ids_alpha_beta_search(State& state, int timeconstraint){
+State ids_alpha_beta_search(State& state, float timeconstraint){
 	int threshold = 1;
 	begin_time=clock();
-	State temp = alpha_beta_search(state, threshold++,timeconstraint);
+
+	State temp = alpha_beta_search(state, threshold++,timeconstraint,true);
+	int  curr_eval = temp.eval();
+	cerr<<"depth: "+to_string(threshold-1)+"\n";
 	State bestTillNow = temp;
-	while(float( clock () - begin_time ) <timeconstraint * 35/20 * 100000){
-		temp = alpha_beta_search(state, threshold,timeconstraint);
-		// if(float( clock () - begin_time ) >=timeconstraint*35/20*1000000)
+	bool flag = abs(curr_eval)>abs(1.005*temp.eval());
+	while(float( clock () - begin_time ) <timeconstraint *25*1000000/20 || flag){
+
+		flag = abs(curr_eval)>abs(1.005*temp.eval());
+		curr_eval = temp.eval();
+		if(flag)
+			cerr<<" QUIENSCENT STATE\n";
+		temp = alpha_beta_search(state, threshold,timeconstraint,flag);
+		// if(float( clock () - begin_time ) >=timeconstraint*25*1000000/20)
 		// 	return bestTillNow;
 		// if(bestTillNow.eval() < temp.eval()) 
-			{bestTillNow = temp; cerr<<"best = temp\n";}
+			{bestTillNow = temp; cerr<<"depth: "+to_string(threshold)+"\n";}
 		threshold++;
 		// printBoard(bestTillNow.board);
-		// cout<<(float)(clock()-begin_time)/timeconstraint*35/20*1000000<<endl;
+		// cout<<(float)(clock()-begin_time)/timeconstraint*25*1000000/20<<endl;
 	}
 	// cout<<"\n";
 	// cout<<"Depth gone: "<<threshold<<endl;
@@ -830,9 +861,10 @@ void mainController(){
 	playerID = (int)(firstInput.at(0)-48);
 	cerr<<"player id "<<playerID<<"\n";
 	// cin>>playerID;
-	State initialState;
+	State initialState = State();
+
 	string enemyMove="",outmsg="";
-	const clock_t begin_time = clock();
+	const clock_t begin_time_real = clock();
 	if(playerID==1){
     	player_type = true;
 		
@@ -844,7 +876,7 @@ void mainController(){
     if(player_type){		// PLAYER 1 PLAYS FIRST MOVE
 
 		cerr<<"starting search"<<"\n";
-		outstate = ids_alpha_beta_search(initialState,20); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState,2); cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 		cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
@@ -853,11 +885,12 @@ void mainController(){
     	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
     }
 	
+	cerr<<"\n\n\n\nstart game\n\n\n\n\n\n";
 
-	while(float(clock() - begin_time) < 200000000){
+	while(float(clock() - begin_time_real) < 999000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState, 20); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 1.8); cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
@@ -876,10 +909,13 @@ void mainController(){
 	    else 
 	    	{cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";}
 	}
-	while(float(clock() - begin_time) < 400000000){
+
+
+	cerr<<"\n\n\n\nmid game\n\n\n\n\n\n";
+	while(float(clock() - begin_time_real) < 60000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState, 40); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 3.3); cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
@@ -898,10 +934,13 @@ void mainController(){
 	    else 
 	    	{cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";}
 	}
-	while(float(clock() - begin_time) < 300000000){
+		
+	cerr<<"\n\n\n\nend game\n\n\n\n\n\n";
+
+	while(float(clock() - begin_time_real) < 300000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState, 30); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 2.2); cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
