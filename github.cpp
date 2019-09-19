@@ -763,6 +763,7 @@ bool cutoff(State& state, int depth, int threshold){
 
 bool flag;
 int thresh;
+int no;
 int max_value(State& state, int alpha, int beta, int depth, int threshold,float timeconstraint){
 	if(cutoff(state, depth, threshold) /*&& isEssentialToGoDown(state, true)==false*/){
         state.backedupVal = state.eval(); 
@@ -773,7 +774,10 @@ int max_value(State& state, int alpha, int beta, int depth, int threshold,float 
     }
 	int v = INT_MIN;
 	vector<State> children =state.giveAllChildsOfMax();
-	for(int i=0;i<3*children.size()/4;i++){
+	if(depth>=3)
+		no=1;
+	else no=4;
+	for(int i=0;i<no*children.size()/4;i++){
 		flag = abs(state.eval()-base)>1.1*abs(children[i].eval()-base);
 		if(float( clock () - begin_time ) >=timeconstraint*25*1000000/20 && !flag)
 			return v;
@@ -799,8 +803,11 @@ int min_value(State& state, int alpha, int beta, int depth, int threshold,float 
         return state.backedupVal;
     }
 	int v = INT_MAX;
+	if(depth>=3)
+		no=1;
+	else no=4;
 	vector<State> children =state.giveAllChildsOfMax();
-	for(int i=0;i<3*children.size()/4;i++){
+	for(int i=0;i<no*children.size()/4;i++){
 
 		flag = abs(state.eval()-base)>1.1*abs(children[i].eval()-base);
 		if(float( clock () - begin_time ) >=timeconstraint*25*1000000/20 && !flag)
@@ -836,7 +843,7 @@ State alpha_beta_search(State& state, int threshold,float timeconstraint){
 		}
 	}
 	if(childsMax.front().backedupVal<childsMax.back().backedupVal)
-		cerr<<" \n\n\n\n\nCORRECT  \n\n\n\n\n";
+		// cerr<<" \n\n\n\n\nCORRECT  \n\n\n\n\n";
 	return childsMax.front();
 }
 
@@ -846,7 +853,7 @@ State ids_alpha_beta_search(State& state, float timeconstraint){
 
 	State temp = alpha_beta_search(state, threshold++,timeconstraint);
 	int  curr_eval = temp.eval();
-	cerr<<"depth: "+to_string(threshold-1)+"\n";
+	// cerr<<"depth: "+to_string(threshold-1)+"\n";
 	State bestTillNow = temp;
 	// bool flag = abs(curr_eval)>abs(1.005*temp.eval());
 	while(float( clock () - begin_time ) <timeconstraint *25*1000000/20 ){
@@ -859,7 +866,7 @@ State ids_alpha_beta_search(State& state, float timeconstraint){
 		// if(float( clock () - begin_time ) >=timeconstraint*25*1000000/20)
 		// 	return bestTillNow;
 		// if(bestTillNow.eval() < temp.eval()) 
-			{bestTillNow = temp; cerr<<"depth: "+to_string(threshold)+"\n";}
+			{bestTillNow = temp; /*cerr<<"depth: "+to_string(threshold)+"\n";*/}
 		threshold++;
 		// printBoard(bestTillNow.board);
 		// cout<<(float)(clock()-begin_time)/timeconstraint*25*1000000/20<<endl;
@@ -877,7 +884,7 @@ void mainController(){
 	// cout<<firstInput;
 	int playerID;// 1 for my turn first
 	playerID = (int)(firstInput.at(0)-48);
-	cerr<<"player id "<<playerID<<"\n";
+	// cerr<<"player id "<<playerID<<"\n";
 	// cin>>playerID;
 	State initialState = State();
 	base = initialState.eval();
@@ -893,22 +900,22 @@ void mainController(){
 	// cerr<<"finished search with msg = S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
     if(player_type){		// PLAYER 1 PLAYS FIRST MOVE
 
-		cerr<<"starting search"<<"\n";
+		// cerr<<"starting search"<<"\n";
 		outstate = ids_alpha_beta_search(initialState,2); cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
-		cerr<<"wanna do: "<<outmsg<<"\n";
+		// cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
 		CORDINATE prevPos = make_pair(int( outmsg.at(2) - 48 ), int(outmsg.at(4)-48));
 		CORDINATE nextPos = make_pair(int( outmsg.at(8) - 48 ), int(outmsg.at(10)-48));
     	cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";
     }
 	
-	cerr<<"\n\n\n\nstart game\n\n\n\n\n\n";
+	// cerr<<"\n\n\n\nstart game\n\n\n\n\n\n";
 
 	while(float(clock() - begin_time_real) < 10000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState, 1.9); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 1.9); //cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
@@ -929,11 +936,11 @@ void mainController(){
 	}
 
 
-	cerr<<"\n\n\n\nmid game\n\n\n\n\n\n";
+	// cerr<<"\n\n\n\nmid game\n\n\n\n\n\n";
 	while(float(clock() - begin_time_real) < 60000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState, 2.4); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 2.4); //cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
@@ -953,12 +960,12 @@ void mainController(){
 	    	{cout<<"S "<< prevPos.second<<" "<<prevPos.first<<" "<< outmsg.at(6)<<" "<< nextPos.second<<" "<<nextPos.first<<"\n";}
 	}
 		
-	cerr<<"\n\n\n\nend game\n\n\n\n\n\n";
+	// cerr<<"\n\n\n\nend game\n\n\n\n\n\n";
 
 	while(float(clock() - begin_time_real) < 100000000){
 		getline(cin, enemyMove);
 		initialState.modifyBoard(enemyMove);
-		outstate = ids_alpha_beta_search(initialState, 2.1); cerr<<"eval of: "<<outstate.eval()<<"\n";
+		outstate = ids_alpha_beta_search(initialState, 2.1);//cerr<<"eval of: "<<outstate.eval()<<"\n";
 		outmsg = outstate.action;
 // cerr<<"wanna do: "<<outmsg<<"\n";
 		initialState = outstate;
